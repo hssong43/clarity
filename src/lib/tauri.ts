@@ -1,0 +1,180 @@
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow, PhysicalPosition } from "@tauri-apps/api/window";
+import type { CapturedImage } from "../types";
+
+export type OverlayMode = "pill" | "panel";
+
+export type ScreenCapturePermission = {
+  supported: boolean;
+  granted: boolean;
+  canRequest: boolean;
+};
+
+export type NativeHttpRequest = {
+  method: "POST";
+  url: string;
+  headers: Array<[string, string]>;
+  body: string;
+};
+
+type NativeHttpStreamRequest = NativeHttpRequest & {
+  requestId: string;
+};
+
+type NativeHttpStreamEvent = {
+  requestId: string;
+  kind: "chunk" | "done" | "error";
+  bytes?: number[];
+  message?: string;
+};
+
+const OVERLAY_POSITION_KEY = "clarity.overlay.position.v1";
+const NATIVE_HTTP_STREAM_EVENT = "clarity-native-http-stream";
+
+export function isTauriRuntime(): boolean {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+export async function captureScreens(): Promise<CapturedImage[]> {
+  if (!isTauriRuntime()) {
+    throw new Error("Tauri desktop runtime is required for screen capture.");
+  }
+  return invoke<CapturedImage[]>("capture_screens");
+}
+
+export async function setOverlayMode(mode: OverlayMode): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke("set_overlay_mode", { mode });
+}
+
+export async function getScreenCapturePermission(): Promise<ScreenCapturePermission> {
+  if (!isTauriRuntime()) {
+    return { supported: false, granted: true, canRequest: false };
+  }
+  return invoke<ScreenCapturePermission>("screen_capture_permission_status");
+}
+
+export async function requestScreenCapturePermission(): Promise<ScreenCapturePermission> {
+  if (!isTauriRuntime()) {
+    return { supported: false, granted: true, canRequest: false };
+  }
+  return invoke<ScreenCapturePermission>("request_screen_capture_permission");
+}
+
+export async function openScreenCaptureSettings(): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke("open_screen_capture_settings");
+}
+
+export async function startOverlayDrag(): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await getCurrentWindow().startDragging();
+}
+
+export async function closeOverlayWindow(): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await getCurrentWindow().close();
+}
+
+export async function streamNativeHttp(
+  request: NativeHttpRequest,
+  onChunk: (chunk: string) => void,
+  signal?: AbortSignal
+): Promise<void> {
+  if (!isTauriRuntime()) {
+    throw new Error("Tauri desktop runtime is required for provider requests.");
+  }
+
+  const requestId = crypto.randomUUID();
+  const streamRequest: NativeHttpStreamRequest = { ...request, requestId };
+  const decoder = new TextDecoder();
+  let streamError: string | null = null;
+
+  const unlisten = await listen<NativeHttpStreamEvent>(NATIVE_HTTP_STREAM_EVENT, ({ payload }) => {
+    if (payload.requestId !== requestId) {
+      return;
+    }
+
+    if (payload.kind === "chunk" && payload.bytes) {
+      const text = decoder.decode(new Uint8Array(payload.bytes), { stream: true });
+      if (text) {
+        onChunk(text);
+      }
+    } else if (payload.kind === "error") {
+      streamError = payload.message ?? "The provider stream failed.";
+    }
+  });
+
+  try {
+    if (signal?.aborted) {
+      throw new Error("The request was cancelled.");
+    }
+
+    await invoke("stream_http_request", { request: streamRequest });
+    const flushed = decoder.decode();
+    if (flushed) {
+      onChunk(flushed);
+    }
+
+    if (streamError) {
+      throw new Error(streamError);
+    }
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : String(error));
+  } finally {
+    unlisten();
+  }
+}
+
+export async function restoreOverlayPosition(): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+
+  const saved = readSavedPosition();
+  if (!saved) {
+    return;
+  }
+
+  await getCurrentWindow().setPosition(new PhysicalPosition(saved.x, saved.y));
+}
+
+export async function bindOverlayPositionPersistence(): Promise<() => void> {
+  if (!isTauriRuntime()) {
+    return () => undefined;
+  }
+
+  return getCurrentWindow().onMoved(({ payload }) => {
+    window.localStorage.setItem(
+      OVERLAY_POSITION_KEY,
+      JSON.stringify({ x: Math.round(payload.x), y: Math.round(payload.y) })
+    );
+  });
+}
+
+function readSavedPosition(): { x: number; y: number } | null {
+  try {
+    const value = window.localStorage.getItem(OVERLAY_POSITION_KEY);
+    if (!value) {
+      return null;
+    }
+
+    const parsed = JSON.parse(value) as { x?: unknown; y?: unknown };
+    if (typeof parsed.x !== "number" || typeof parsed.y !== "number") {
+      return null;
+    }
+
+    return { x: parsed.x, y: parsed.y };
+  } catch {
+    return null;
+  }
+}

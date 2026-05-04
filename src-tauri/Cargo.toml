@@ -1,0 +1,24 @@
+[package]
+name = "clarity"
+version = "0.1.0"
+description = "On-demand desktop vision assistant"
+authors = ["Clarity"]
+license = "MIT"
+repository = ""
+edition = "2021"
+
+[lib]
+name = "clarity_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+base64 = "0.22"
+futures-util = "0.3"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+reqwest = { version = "0.13.3", features = ["stream"] }
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "2.0", features = ["macos-private-api"] }
+xcap = "0.9.4"

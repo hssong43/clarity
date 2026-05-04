@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+src-tauri/target/
+supabase/.branches/
+supabase/.temp/
+supabase/functions/.env
+*.log

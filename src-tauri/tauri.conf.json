@@ -1,0 +1,72 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Clarity",
+  "version": "0.1.0",
+  "identifier": "app.clarity.desktop",
+  "build": {
+    "beforeDevCommand": "npm.cmd run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm.cmd run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';"
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "Clarity",
+        "url": "index.html",
+        "width": 430,
+        "height": 620,
+        "minWidth": 184,
+        "minHeight": 56,
+        "maxWidth": 430,
+        "maxHeight": 620,
+        "decorations": false,
+        "transparent": true,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "dragDropEnabled": false,
+        "center": true,
+        "contentProtected": true,
+        "backgroundColor": "#00000000"
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "Clarity",
+    "shortDescription": "On-demand desktop vision assistant",
+    "longDescription": "Clarity is a lightweight always-on desktop vision assistant that captures the screen on demand and streams contextual answers with your own model API keys.",
+    "category": "Productivity",
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/installer-header.bmp",
+        "sidebarImage": "icons/installer-sidebar.bmp",
+        "displayLanguageSelector": false,
+        "installMode": "currentUser",
+        "languages": ["English"]
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "hardenedRuntime": true,
+      "signingIdentity": null,
+      "entitlements": "Entitlements.plist"
+    }
+  }
+}
