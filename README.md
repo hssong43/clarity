@@ -8,16 +8,10 @@ Clarity는 사용자가 요청한 순간의 화면 캡처와 문서 첨부를 AI
 
 ## 화면
 
-| 대화 시작 | 화면·문서 첨부 |
+| 화면·문서 첨부 | 응답 검토 |
 | --- | --- |
-| <img src="docs/images/clarity-chat-actual.jpg" alt="Clarity의 실제 대화 시작 화면" /> | <img src="docs/images/clarity-attachment-fixture.jpg" alt="합성 화면과 문서가 첨부된 Clarity 흐름" width="360" /> |
-| 실제 UI | 실제 UI · 합성 화면과 문서 · 네트워크 호출 없음 |
-
-<p align="center">
-  <img src="docs/images/clarity-answer-fixture.jpg" alt="합성 첨부를 바탕으로 한 결정론적 답변 화면" width="360" />
-  <br />
-  실제 UI · 합성 첨부와 응답 · 네트워크 호출 없음
-</p>
+| <img src="docs/images/clarity-attachment-fixture.jpg" alt="합성 화면과 문서가 첨부된 Clarity 흐름" width="360" /> | <img src="docs/images/clarity-answer-fixture.jpg" alt="합성 첨부를 바탕으로 한 결정론적 답변 화면" width="360" /> |
+| 실제 UI · 합성 화면과 문서 · 네트워크 호출 없음 | 실제 UI · 합성 첨부와 응답 · 네트워크 호출 없음 |
 
 ## 주요 사용자 흐름
 
