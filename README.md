@@ -1,58 +1,115 @@
 # Clarity
 
-Clarity is a personal desktop vision assistant. It runs as a small always-on overlay, captures the current desktop on demand, compresses screenshots locally, and streams contextual Korean answers with your own model API keys.
+> **Personal desktop vision assistant** — 화면과 문서의 맥락을 대화에 연결하는 Tauri + React 데스크톱 앱
 
-## Stack
+Clarity는 사용자가 요청한 순간의 화면 캡처와 문서 첨부를 AI 대화에 바로 연결하는 개인용 데스크톱 앱입니다. React 인터페이스는 대화와 상태를 담당하고, Tauri/Rust 레이어는 화면 캡처와 허용된 AI 제공자에 대한 네이티브 스트리밍 요청을 담당합니다.
 
-- Tauri v2 + Rust for the lightweight desktop shell and screen capture.
-- React + TypeScript + Vite for the overlay and chat UI.
-- OpenAI, Anthropic Claude, or Google Gemini vision-capable models.
+> 이 프로젝트는 개인 프로토타입입니다. 실제 사용자 수·업무 영향·운영 안정성은 주장하지 않습니다.
 
-## Runtime Model
+## 화면
 
-- Create one or more local model profiles for OpenAI, Claude, and Gemini.
-- Profiles are stored in this device's local app storage under `clarity.modelProfiles.v1`.
-- The active profile ID is stored under `clarity.activeModelProfileId.v1`.
-- Existing `clarity.openai.apiKey.v1` values migrate into a default OpenAI profile on first launch.
-- Screenshots are compressed locally, then sent through the Tauri desktop shell to the selected provider only when you run an action or ask a question.
-- OpenAI requests use `store: false`.
+| 대화 시작 | 화면·문서 첨부 |
+| --- | --- |
+| <img src="docs/images/clarity-chat-actual.jpg" alt="Clarity의 실제 대화 시작 화면" /> | <img src="docs/images/clarity-attachment-fixture.jpg" alt="합성 화면과 문서가 첨부된 Clarity 흐름" width="360" /> |
+| 실제 UI | 실제 UI · 합성 화면과 문서 · 네트워크 호출 없음 |
 
-## Local Setup
+<p align="center">
+  <img src="docs/images/clarity-answer-fixture.jpg" alt="합성 첨부를 바탕으로 한 결정론적 답변 화면" width="360" />
+  <br />
+  실제 UI · 합성 첨부와 응답 · 네트워크 호출 없음
+</p>
 
-1. Install dependencies:
+## 주요 사용자 흐름
 
-   ```powershell
-   npm.cmd install
-   ```
+1. 사용자가 제공자·모델·API 키로 로컬 프로필을 만듭니다.
+2. 현재 화면을 캡처하거나 이미지, PDF, DOCX, 텍스트 파일을 첨부합니다.
+3. 첨부 항목을 `reading`, `ready`, `error` 상태로 정규화하고 준비된 항목만 요청에 포함합니다.
+4. 질문을 보내면 Tauri의 네이티브 HTTP 경계가 허용된 제공자로 요청을 보내고, 스트리밍 응답을 공통 대화 상태로 반영합니다.
 
-2. Run the desktop app:
+## 기술 스택
 
-   ```powershell
-   npm.cmd run tauri:dev
-   ```
+- **UI**: React, TypeScript, Vite
+- **Desktop shell**: Tauri v2, Rust
+- **Context**: 다중 모니터 화면 캡처, 이미지·텍스트·PDF·DOCX 첨부
+- **AI providers**: OpenAI, Anthropic, Google Gemini, OpenRouter
+- **Quality**: Vitest, React Testing Library
 
-3. Create a model profile in the first-run panel.
+## 아키텍처와 데이터 흐름
 
-## Packaging
-
-Windows:
-
-```powershell
-npm.cmd run package:windows
+```mermaid
+flowchart LR
+  U[User] --> R[React UI]
+  R --> A[Attachment state\nreading / ready / error]
+  R --> T[Tauri command / event boundary]
+  T --> C[Native screen capture]
+  T --> H[Native streaming HTTP]
+  H --> P[Allowed AI provider]
+  P --> H
+  H --> S[Normalized stream events]
+  S --> R
+  R --> L[Local WebView storage\nprofile and API key]
 ```
 
-macOS:
+Tauri의 네이티브 레이어는 화면 캡처와 허용된 제공자 URL에 대한 HTTP 스트리밍만 담당합니다. UI는 제공자별 요청·스트림 형식을 어댑터에서 정규화한 뒤 공통 상태 전이로 처리합니다.
+
+## 기술적 결정
+
+### 시스템 기능을 좁은 네이티브 경계로 분리
+
+화면 캡처와 스트리밍 HTTP는 운영체제 권한·네이티브 처리가 필요하지만, 대화 UI까지 Rust에 묶을 필요는 없었습니다. 그래서 React는 제품 UI와 상태를 맡고, Tauri command/event는 캡처·권한·스트림 전달만 맡도록 나눴습니다.
+
+### 서로 다른 제공자 스트림을 공통 상태로 통합
+
+제공자마다 요청 본문과 스트림 이벤트 형식이 다릅니다. 제공자별 요청 생성과 이벤트 파서를 어댑터로 분리하고, 정규화된 델타를 공통 reducer에 전달해 UI가 `capturing`, `streaming`, `ready`, `error` 상태에 집중하게 했습니다.
+
+### 첨부를 전송 전에 검증 가능한 상태로 만들기
+
+PDF·DOCX·이미지가 한꺼번에 들어오면 읽기 실패 또는 크기 제한을 요청 뒤에 발견하기 쉽습니다. 각 첨부를 준비 상태로 분류하고, 준비 완료된 항목만 메시지 컨텍스트에 넣어 조용한 누락을 줄였습니다.
+
+## 로컬 실행
+
+### 요구 사항
+
+- Node.js와 npm
+- Rust toolchain
+- 대상 OS의 [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/)
 
 ```bash
+npm ci
+npm run tauri:dev
+```
+
+첫 실행에서 제공자·모델·API 키를 입력합니다. API 키는 저장소에 넣지 않으며, 실제 화면 또는 문서를 캡처할 때는 전송 전에 대상 제공자의 데이터 정책을 직접 확인해야 합니다.
+
+### 패키징
+
+```bash
+# Windows
+npm run package:windows
+
+# macOS
 npm run package:macos
 ```
 
-See `docs/RELEASE.md` for packaging output paths.
+릴리스 자산은 재현 가능한 패키징을 확인한 뒤 [GitHub Releases](https://github.com/hssong43/clarity/releases)에 게시할 예정입니다. 현재 저장소에 있던 설치 파일은 검증 전까지 보존하며, 이 변경에서 삭제하거나 Git 히스토리를 재작성하지 않습니다.
 
-## Tests
+## 테스트와 CI
 
-```powershell
-npm.cmd test
-cd src-tauri
-cargo test
+```bash
+npm test
+npm run build
 ```
+
+단위 테스트는 대화 상태 전이, 프로필 직렬화, SSE 파싱, 첨부 처리, 제공자별 요청·응답 정규화를 다룹니다. GitHub Actions는 `push`와 pull request마다 의존성 설치, 테스트, 프론트엔드 빌드를 실행합니다.
+
+## 현재 한계와 보안 경계
+
+- API 키와 프로필은 현재 WebView의 `localStorage`에 평문으로 보관됩니다. 이는 보안 저장소가 아니며, OS credential store로 이전하기 전에는 민감한 장기 키 저장에 적합하지 않습니다.
+- 화면 캡처와 첨부는 사용자가 요청을 보낼 때 선택한 외부 AI 제공자에 전송될 수 있습니다. 민감한 화면·문서는 전송하면 안 됩니다.
+- 제공자 정책, 네트워크 오류, 장시간 운영 시나리오는 별도 검증이 필요합니다.
+- 실제 사용자·조직에 대한 도입 성과나 보안 인증을 주장하지 않습니다.
+
+## 관련 링크
+
+- [Portfolio case study](https://hyunseok-portfolio.broken-paper-9ee3.workers.dev/projects/clarity)
+- [Release notes](docs/RELEASE.md)
