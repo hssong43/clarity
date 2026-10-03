@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Camera, Loader2, Send, Square } from "lucide-react";
 import type { PendingAttachment } from "../lib/attachments";
 import { AttachmentChip } from "./AttachmentChip";
@@ -15,7 +15,8 @@ export function Composer({
   onCapture,
   onRemoveAttachment,
   onSend,
-  onStop
+  onStop,
+  focusRequest = 0
 }: {
   pendingAttachments: PendingAttachment[];
   hasPendingScreen: boolean;
@@ -29,8 +30,26 @@ export function Composer({
   onRemoveAttachment: (id: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
+  /** Bump to move keyboard focus into the question field. */
+  focusRequest?: number;
 }) {
   const [question, setQuestion] = useState("");
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const pendingFocusRef = useRef(false);
+
+  useEffect(() => {
+    if (focusRequest > 0) {
+      pendingFocusRef.current = true;
+    }
+  }, [focusRequest]);
+
+  // The field is disabled while a capture runs, so focus once it is usable again.
+  useEffect(() => {
+    if (pendingFocusRef.current && !isBusy) {
+      pendingFocusRef.current = false;
+      inputRef.current?.focus();
+    }
+  }, [focusRequest, isBusy]);
   const canSubmitQuestion =
     Boolean(question.trim() || hasReadyAttachments) && !isBusy && !isReadingAttachment;
 
@@ -65,6 +84,7 @@ export function Composer({
           {isCapturingAttachment ? <Loader2 size={15} className="spin" /> : <Camera size={15} />}
         </button>
         <input
+          ref={inputRef}
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
           placeholder={hasReadyAttachments ? "Ask about the attachments" : "Message Clarity"}

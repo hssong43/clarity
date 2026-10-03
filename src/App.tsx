@@ -1,11 +1,13 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Composer } from "./components/Composer";
 import { Conversation } from "./components/Conversation";
 import { PanelHeader } from "./components/PanelHeader";
 import { PermissionNotice } from "./components/PermissionNotice";
 import { Pill } from "./components/Pill";
 import { ProfilePanel } from "./components/ProfilePanel";
+import { ShortcutSettings } from "./components/ShortcutSettings";
 import { useAttachments } from "./hooks/useAttachments";
+import { useCaptureShortcut } from "./hooks/useCaptureShortcut";
 import { useChatStream } from "./hooks/useChatStream";
 import { useFileDrop } from "./hooks/useFileDrop";
 import { useOverlayWindow } from "./hooks/useOverlayWindow";
@@ -55,6 +57,21 @@ function App() {
     [attachFiles, expandFromPill, showPill]
   );
   const { isDropTarget, dropHandlers } = useFileDrop(handleDroppedFiles);
+
+  const [composerFocusRequest, setComposerFocusRequest] = useState(0);
+  const { shortcut, shortcutError, updateShortcut } = useCaptureShortcut(() => {
+    if (!activeProfile || showProfilePanel) {
+      expandFromPill();
+      return;
+    }
+    if (state.mode === "IdlePill") {
+      dispatch({ type: "EXPAND" });
+    }
+    if (!isBusy) {
+      void attachments.captureScreenAttachment();
+    }
+    setComposerFocusRequest((request) => request + 1);
+  });
 
   const saveProfile = async (draft: ProfileDraft) => {
     if ((await profiles.saveProfile(draft)) && state.mode === "Error") {
@@ -114,6 +131,13 @@ function App() {
             onProvider={profiles.changeDraftProvider}
             onSave={(draft) => void saveProfile(draft)}
             onSelectProfile={profiles.selectProfile}
+            footer={
+              <ShortcutSettings
+                shortcut={shortcut}
+                error={shortcutError}
+                onChange={(next) => void updateShortcut(next)}
+              />
+            }
           />
         ) : null}
 
@@ -147,6 +171,7 @@ function App() {
               onRemoveAttachment={attachments.removeAttachment}
               onSend={sendQuestion}
               onStop={stopStreaming}
+              focusRequest={composerFocusRequest}
             />
           </>
         ) : null}

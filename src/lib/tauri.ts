@@ -35,6 +35,7 @@ type NativeHttpStreamEvent = {
 
 const OVERLAY_POSITION_KEY = "clarity.overlay.position.v1";
 const NATIVE_HTTP_STREAM_EVENT = "clarity-native-http-stream";
+const CAPTURE_SHORTCUT_EVENT = "clarity-capture-shortcut";
 
 export function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -87,6 +88,21 @@ export async function closeOverlayWindow(): Promise<void> {
     return;
   }
   await getCurrentWindow().close();
+}
+
+/** Registers the global capture shortcut; "" unregisters it. */
+export async function setCaptureShortcut(shortcut: string): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke("set_capture_shortcut", { shortcut });
+}
+
+export async function onCaptureShortcut(handler: () => void): Promise<() => void> {
+  if (!isTauriRuntime()) {
+    return () => undefined;
+  }
+  return listen(CAPTURE_SHORTCUT_EVENT, () => handler());
 }
 
 /** Stores the key in the OS keychain. Resolves false when that is unavailable. */

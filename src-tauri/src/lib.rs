@@ -22,6 +22,7 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 // Applies to each read, so long streams stay alive as long as chunks keep arriving.
 const READ_TIMEOUT: Duration = Duration::from_secs(90);
 const CANCELLED_MESSAGE: &str = "The request was cancelled.";
+const CAPTURE_SHORTCUT_EVENT: &str = "clarity-capture-shortcut";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -200,6 +201,53 @@ fn delete_api_key(profile_id: String) -> Result<(), String> {
     secrets::delete_api_key(&profile_id)
 }
 
+/// Replaces the global capture shortcut. An empty string disables it.
+#[tauri::command]
+fn set_capture_shortcut(app: AppHandle, shortcut: String) -> Result<(), String> {
+    #[cfg(desktop)]
+    {
+        use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
+
+        let shortcut = shortcut.trim();
+        let parsed = if shortcut.is_empty() {
+            None
+        } else {
+            Some(
+                shortcut
+                    .parse::<Shortcut>()
+                    .map_err(|error| format!("Invalid shortcut: {error}"))?,
+            )
+        };
+
+        let manager = app.global_shortcut();
+        manager
+            .unregister_all()
+            .map_err(|error| error.to_string())?;
+        if let Some(parsed) = parsed {
+            manager.register(parsed).map_err(|_| {
+                format!(
+                    "{shortcut} could not be registered. It may already be used by another app."
+                )
+            })?;
+        }
+    }
+    #[cfg(not(desktop))]
+    let _ = (app, shortcut);
+    Ok(())
+}
+
+#[cfg(desktop)]
+fn handle_capture_shortcut(app: &AppHandle, event: tauri_plugin_global_shortcut::ShortcutEvent) {
+    if event.state != tauri_plugin_global_shortcut::ShortcutState::Pressed {
+        return;
+    }
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+    let _ = app.emit(CAPTURE_SHORTCUT_EVENT, ());
+}
+
 #[tauri::command]
 fn cancel_http_request(state: State<'_, HttpState>, request_id: String) {
     state.cancel(&request_id);
@@ -269,7 +317,15 @@ fn describe_http_error(error: reqwest::Error) -> String {
 }
 
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(desktop)]
+    let builder = builder.plugin(
+        tauri_plugin_global_shortcut::Builder::new()
+            .with_handler(|app, _shortcut, event| handle_capture_shortcut(app, event))
+            .build(),
+    );
+
+    builder
         .setup(|app| {
             app.manage(HttpState::new()?);
             if let Some(window) = app.get_webview_window("main") {
@@ -287,7 +343,8 @@ pub fn run() {
             stream_http_request,
             cancel_http_request,
             set_api_key,
-            delete_api_key
+            delete_api_key,
+            set_capture_shortcut
         ])
         .run(tauri::generate_context!())
         .expect("error while running Clarity");
@@ -386,6 +443,21 @@ mod tests {
         let _registration = state.register("c").expect("registered");
         state.finish("c");
         assert!(state.requests.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn parses_shortcuts_produced_by_the_settings_ui() {
+        use tauri_plugin_global_shortcut::Shortcut;
+
+        for shortcut in [
+            "CommandOrControl+Shift+Space",
+            "Ctrl+Shift+KeyK",
+            "Super+Alt+Digit1",
+            "Shift+F5",
+        ] {
+            assert!(shortcut.parse::<Shortcut>().is_ok(), "{shortcut}");
+        }
+        assert!("Ctrl+Shift+NotAKey".parse::<Shortcut>().is_err());
     }
 
     #[test]
