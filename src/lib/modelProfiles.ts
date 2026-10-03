@@ -41,30 +41,26 @@ export const providerConfigs: Record<
   openai: {
     label: "OpenAI",
     keyPlaceholder: "sk-...",
-    defaultModel: "gpt-4o-mini",
-    modelOptions: ["gpt-4o-mini", "gpt-5-mini", "gpt-5.2", "gpt-4.1"]
+    defaultModel: "gpt-5.4-mini",
+    modelOptions: ["gpt-5.4-mini", "gpt-5.4", "gpt-5.5"]
   },
   anthropic: {
     label: "Claude",
     keyPlaceholder: "sk-ant-...",
-    defaultModel: "claude-sonnet-4-20250514",
-    modelOptions: [
-      "claude-sonnet-4-20250514",
-      "claude-opus-4-1-20250805",
-      "claude-3-5-haiku-20241022"
-    ]
+    defaultModel: "claude-sonnet-5-5",
+    modelOptions: ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-4-5"]
   },
   gemini: {
     label: "Gemini",
     keyPlaceholder: "AIza...",
-    defaultModel: "gemini-2.5-pro",
-    modelOptions: ["gemini-2.5-pro"]
+    defaultModel: "gemini-3.8-flash",
+    modelOptions: ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro-preview"]
   },
   openrouter: {
     label: "OpenRouter",
     keyPlaceholder: "sk-or-v1-...",
     defaultModel: "openrouter/auto",
-    modelOptions: ["openrouter/auto", "openai/gpt-5.2", "anthropic/claude-sonnet-4"]
+    modelOptions: ["openrouter/auto", "anthropic/claude-sonnet-5.5", "openai/gpt-5.4-mini"]
   }
 };
 

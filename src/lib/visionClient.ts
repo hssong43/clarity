@@ -23,6 +23,8 @@ type ProviderStreamParser = {
 };
 
 const MAX_OUTPUT_TOKENS = 4096;
+// Adaptive-thinking Claude models spend part of max_tokens on thinking.
+const ADAPTIVE_CLAUDE_MAX_TOKENS = 16000;
 
 export async function streamVisionChat({
   profile,
@@ -87,7 +89,10 @@ export function buildAnthropicHttpRequest(
     headers: [
       ["Content-Type", "application/json"],
       ["x-api-key", profile.apiKey],
-      ["anthropic-version", "2023-06-01"]
+      ["anthropic-version", "2023-06-01"],
+      ...(supportsClaudeRefusalFallbacks(profile.model)
+        ? ([["anthropic-beta", "server-side-fallback-2026-07-01"]] as Array<[string, string]>)
+        : [])
     ],
     body: JSON.stringify(buildAnthropicMessagesPayload(profile.model, request))
   };
@@ -103,7 +108,7 @@ export function buildGeminiHttpRequest(
       profile.model
     )}:streamGenerateContent?alt=sse&key=${encodeURIComponent(profile.apiKey)}`,
     headers: [["Content-Type", "application/json"]],
-    body: JSON.stringify(buildGeminiGenerateContentPayload(request))
+    body: JSON.stringify(buildGeminiGenerateContentPayload(profile.model, request))
   };
 }
 
@@ -132,7 +137,7 @@ export function buildOpenAIResponsesPayload(model: string, request: VisionChatRe
     stream_options: {
       include_obfuscation: false
     },
-    temperature: 0.2,
+    ...(isOpenAIReasoningModel(model) ? { reasoning: { effort: "low" } } : { temperature: 0.2 }),
     max_output_tokens: MAX_OUTPUT_TOKENS,
     input: request.messages.map((message) => ({
       role: message.role,
@@ -162,8 +167,12 @@ export function buildOpenAIResponsesPayload(model: string, request: VisionChatRe
 export function buildAnthropicMessagesPayload(model: string, request: VisionChatRequest) {
   return {
     model,
-    max_tokens: MAX_OUTPUT_TOKENS,
-    temperature: 0.2,
+    // Claude 5-generation models reject sampling parameters and always think;
+    // keep thinking light for quick overlay answers.
+    ...(isAdaptiveClaudeModel(model)
+      ? { max_tokens: ADAPTIVE_CLAUDE_MAX_TOKENS, output_config: { effort: "low" } }
+      : { max_tokens: MAX_OUTPUT_TOKENS, temperature: 0.2 }),
+    ...(supportsClaudeRefusalFallbacks(model) ? { fallbacks: "default" } : {}),
     stream: true,
     system: buildSystemPrompt(request),
     messages: request.messages.map((message) => ({
@@ -189,13 +198,14 @@ export function buildAnthropicMessagesPayload(model: string, request: VisionChat
   };
 }
 
-export function buildGeminiGenerateContentPayload(request: VisionChatRequest) {
+export function buildGeminiGenerateContentPayload(model: string, request: VisionChatRequest) {
   return {
     systemInstruction: {
       parts: [{ text: buildSystemPrompt(request) }]
     },
     generationConfig: {
-      temperature: 0.2,
+      // Google recommends the default temperature for Gemini 3 models.
+      ...(isGemini3Model(model) ? {} : { temperature: 0.2 }),
       maxOutputTokens: MAX_OUTPUT_TOKENS
     },
     contents: request.messages.map((message) => ({
@@ -658,6 +668,7 @@ function normalizeAnthropicStopReason(reason: string): StreamStopReason {
   if (reason === "max_tokens") return "length";
   if (reason === "stop_sequence" || reason === "end_turn") return "complete";
   if (reason === "tool_use") return "tool_use";
+  if (reason === "refusal") return "content_filter";
   return reason ? "unknown" : "complete";
 }
 
@@ -684,4 +695,22 @@ function stripDataUrl(image: ChatImageAttachment): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isAdaptiveClaudeModel(model: string): boolean {
+  return /^claude-(opus|sonnet|fable)-5/.test(model);
+}
+
+// Server-side refusal fallbacks ("default" routing) on the Claude API.
+function supportsClaudeRefusalFallbacks(model: string): boolean {
+  return /^claude-(opus-5|sonnet-5-5|fable-5-1)/.test(model);
+}
+
+// GPT-5 and o-series reasoning models reject temperature.
+function isOpenAIReasoningModel(model: string): boolean {
+  return /^(gpt-5|o\d)/.test(model);
+}
+
+function isGemini3Model(model: string): boolean {
+  return /^gemini-3/.test(model);
 }

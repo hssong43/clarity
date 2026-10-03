@@ -107,6 +107,12 @@ describe("model profile storage", () => {
     expect(providerConfigs.openrouter.modelOptions).toContain("openrouter/auto");
   });
 
+  it("includes each provider's default model in its presets", () => {
+    for (const config of Object.values(providerConfigs)) {
+      expect(config.modelOptions).toContain(config.defaultModel);
+    }
+  });
+
   it("loads persisted OpenRouter profiles", () => {
     const storage = new MemoryStorage();
     const profiles = [
