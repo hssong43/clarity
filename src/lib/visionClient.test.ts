@@ -23,7 +23,8 @@ import {
 import { streamNativeHttp } from "./tauri";
 
 vi.mock("./tauri", () => ({
-  streamNativeHttp: vi.fn()
+  streamNativeHttp: vi.fn(),
+  isAbortError: (error: unknown) => error instanceof DOMException && error.name === "AbortError"
 }));
 
 const image = {
@@ -451,6 +452,19 @@ describe("streamVisionChat", () => {
 
     expect(streamNativeHttp).toHaveBeenCalledOnce();
     expect(seen).toEqual(["A", "B", "done"]);
+  });
+
+  it("rethrows cancellations without wrapping them as provider errors", async () => {
+    const abortError = new DOMException("The request was cancelled.", "AbortError");
+    vi.mocked(streamNativeHttp).mockRejectedValueOnce(abortError);
+
+    await expect(
+      streamVisionChat({
+        profile: { ...baseProfile, provider: "openai", apiKey: "sk-test", model: "gpt-4o-mini" },
+        request: textOnlyRequest,
+        onEvent: () => undefined
+      })
+    ).rejects.toBe(abortError);
   });
 
   it("uses provider error messages when requests fail", async () => {

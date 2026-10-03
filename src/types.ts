@@ -45,7 +45,7 @@ export type VisionChatRequest = {
 };
 
 export type StreamStopReason =
-  "complete" | "length" | "content_filter" | "tool_use" | "error" | "unknown";
+  "complete" | "length" | "content_filter" | "tool_use" | "error" | "cancelled" | "unknown";
 
 export type StreamEvent =
   | { type: "delta"; text: string }

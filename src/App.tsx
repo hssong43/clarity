@@ -20,6 +20,7 @@ import {
   Plus,
   Send,
   Sparkles,
+  Square,
   Trash2,
   X
 } from "lucide-react";
@@ -59,6 +60,7 @@ import {
   requestScreenCapturePermission,
   restoreOverlayPosition,
   setOverlayMode,
+  isAbortError,
   startOverlayDrag,
   type ScreenCapturePermission
 } from "./lib/tauri";
@@ -78,6 +80,7 @@ function App() {
   const pillPressStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const pillDragStartedRef = useRef(false);
   const dragDepthRef = useRef(0);
+  const streamAbortRef = useRef<AbortController | null>(null);
   const [profileState, setProfileState] = useState<ProfileState>(() => loadProfileState());
   const [profileDraft, setProfileDraft] = useState<ProfileDraft>(() =>
     createProfileDraft(getActiveProfile(loadProfileState()))
@@ -108,6 +111,8 @@ function App() {
   const canSubmitQuestion =
     Boolean(question.trim() || hasReadyAttachments) && !isBusy && !isReadingAttachment;
   const showPill = state.mode === "IdlePill" && (hasProfile || !showProfilePanel);
+
+  useEffect(() => () => streamAbortRef.current?.abort(), []);
 
   useEffect(() => {
     let unlisten: (() => void) | null = null;
@@ -441,10 +446,13 @@ function App() {
         setPendingAttachments([]);
       }
       dispatch({ type: "STREAM_START" });
+      const controller = new AbortController();
+      streamAbortRef.current = controller;
       try {
         await streamVisionChat({
           profile: activeProfile,
           request: { messages: requestMessages },
+          signal: controller.signal,
           onEvent(event) {
             if (event.type === "delta") {
               dispatch({ type: "STREAM_DELTA", text: event.text });
@@ -456,14 +464,26 @@ function App() {
           }
         });
       } catch (error) {
-        dispatch({
-          type: "FAIL",
-          error: error instanceof Error ? error.message : "The request failed."
-        });
+        if (isAbortError(error)) {
+          dispatch({ type: "STREAM_DONE", reason: "cancelled" });
+        } else {
+          dispatch({
+            type: "FAIL",
+            error: error instanceof Error ? error.message : "The request failed."
+          });
+        }
+      } finally {
+        if (streamAbortRef.current === controller) {
+          streamAbortRef.current = null;
+        }
       }
     },
     [activeProfile, pendingAttachments, state.messages]
   );
+
+  const stopStreaming = useCallback(() => {
+    streamAbortRef.current?.abort();
+  }, []);
 
   const continueAnswer = useCallback(() => {
     void sendChatMessage(CONTINUE_PROMPT, {
@@ -742,14 +762,26 @@ function App() {
                   }
                   disabled={isBusy}
                 />
-                <button
-                  className="send-button"
-                  type="submit"
-                  disabled={!canSubmitQuestion}
-                  title="Send"
-                >
-                  <Send size={15} />
-                </button>
+                {state.mode === "Streaming" ? (
+                  <button
+                    className="send-button"
+                    type="button"
+                    onClick={stopStreaming}
+                    title="Stop"
+                    aria-label="Stop"
+                  >
+                    <Square size={13} fill="currentColor" />
+                  </button>
+                ) : (
+                  <button
+                    className="send-button"
+                    type="submit"
+                    disabled={!canSubmitQuestion}
+                    title="Send"
+                  >
+                    <Send size={15} />
+                  </button>
+                )}
               </form>
             </div>
           </>

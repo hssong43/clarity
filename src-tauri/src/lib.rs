@@ -1,15 +1,25 @@
 mod capture;
 
+use std::collections::HashMap;
+use std::sync::Mutex;
+use std::time::Duration;
+
 use capture::CapturedImage;
+use futures_util::future::{AbortHandle, AbortRegistration, Abortable};
 use futures_util::StreamExt;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, LogicalSize, Manager, Size};
+use tauri::{AppHandle, Emitter, LogicalSize, Manager, Size, State};
 
 const PILL_WIDTH: f64 = 184.0;
 const PILL_HEIGHT: f64 = 56.0;
 const PANEL_WIDTH: f64 = 430.0;
 const PANEL_HEIGHT: f64 = 620.0;
+
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
+// Applies to each read, so long streams stay alive as long as chunks keep arriving.
+const READ_TIMEOUT: Duration = Duration::from_secs(90);
+const CANCELLED_MESSAGE: &str = "The request was cancelled.";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -101,8 +111,62 @@ fn open_screen_capture_settings() -> Result<(), String> {
     Ok(())
 }
 
+struct HttpState {
+    client: reqwest::Client,
+    requests: Mutex<HashMap<String, RequestEntry>>,
+}
+
+enum RequestEntry {
+    Running(AbortHandle),
+    // Cancel arrived before the request registered itself.
+    Cancelled,
+}
+
+impl HttpState {
+    fn new() -> Result<Self, reqwest::Error> {
+        let client = reqwest::Client::builder()
+            .connect_timeout(CONNECT_TIMEOUT)
+            .read_timeout(READ_TIMEOUT)
+            .build()?;
+        Ok(Self {
+            client,
+            requests: Mutex::new(HashMap::new()),
+        })
+    }
+
+    /// Returns `None` when the request was cancelled before it started.
+    fn register(&self, request_id: &str) -> Option<AbortRegistration> {
+        let mut requests = self.requests.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(RequestEntry::Cancelled) = requests.remove(request_id) {
+            return None;
+        }
+        let (handle, registration) = AbortHandle::new_pair();
+        requests.insert(request_id.to_string(), RequestEntry::Running(handle));
+        Some(registration)
+    }
+
+    fn cancel(&self, request_id: &str) {
+        let mut requests = self.requests.lock().unwrap_or_else(|e| e.into_inner());
+        match requests.remove(request_id) {
+            Some(RequestEntry::Running(handle)) => handle.abort(),
+            _ => {
+                requests.insert(request_id.to_string(), RequestEntry::Cancelled);
+            }
+        }
+    }
+
+    fn finish(&self, request_id: &str) {
+        let mut requests = self.requests.lock().unwrap_or_else(|e| e.into_inner());
+        requests.remove(request_id);
+    }
+}
+
 #[tauri::command]
-async fn stream_http_request(app: AppHandle, request: NativeHttpRequest) -> Result<(), String> {
+async fn stream_http_request(
+    app: AppHandle,
+    state: State<'_, HttpState>,
+    request: NativeHttpRequest,
+) -> Result<(), String> {
     if !request.method.eq_ignore_ascii_case("POST") {
         return Err("Only POST provider requests are supported".to_string());
     }
@@ -111,14 +175,33 @@ async fn stream_http_request(app: AppHandle, request: NativeHttpRequest) -> Resu
         return Err("Provider URL is not allowed".to_string());
     }
 
-    let client = reqwest::Client::new();
+    let request_id = request.request_id.clone();
+    let registration = state
+        .register(&request_id)
+        .ok_or_else(|| CANCELLED_MESSAGE.to_string())?;
+    let result = Abortable::new(run_http_stream(&app, &state.client, request), registration).await;
+    state.finish(&request_id);
+
+    result.unwrap_or_else(|_| Err(CANCELLED_MESSAGE.to_string()))
+}
+
+#[tauri::command]
+fn cancel_http_request(state: State<'_, HttpState>, request_id: String) {
+    state.cancel(&request_id);
+}
+
+async fn run_http_stream(
+    app: &AppHandle,
+    client: &reqwest::Client,
+    request: NativeHttpRequest,
+) -> Result<(), String> {
     let response = client
         .post(&request.url)
         .headers(build_headers(&request.headers)?)
         .body(request.body)
         .send()
         .await
-        .map_err(|error| error.to_string())?;
+        .map_err(describe_http_error)?;
 
     let status = response.status();
     if !status.is_success() {
@@ -128,9 +211,9 @@ async fn stream_http_request(app: AppHandle, request: NativeHttpRequest) -> Resu
 
     let mut stream = response.bytes_stream();
     while let Some(chunk) = stream.next().await {
-        let bytes = chunk.map_err(|error| error.to_string())?;
+        let bytes = chunk.map_err(describe_http_error)?;
         emit_http_stream_event(
-            &app,
+            app,
             NativeHttpStreamEvent {
                 request_id: &request.request_id,
                 kind: "chunk",
@@ -141,7 +224,7 @@ async fn stream_http_request(app: AppHandle, request: NativeHttpRequest) -> Resu
     }
 
     emit_http_stream_event(
-        &app,
+        app,
         NativeHttpStreamEvent {
             request_id: &request.request_id,
             kind: "done",
@@ -152,9 +235,21 @@ async fn stream_http_request(app: AppHandle, request: NativeHttpRequest) -> Resu
     Ok(())
 }
 
+// Strip the URL so query-string credentials never reach the UI.
+fn describe_http_error(error: reqwest::Error) -> String {
+    if error.is_timeout() {
+        return "The provider did not respond in time.".to_string();
+    }
+    if error.is_connect() {
+        return "Could not connect to the provider.".to_string();
+    }
+    error.without_url().to_string()
+}
+
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            app.manage(HttpState::new()?);
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_always_on_top(true);
                 let _ = window.set_skip_taskbar(true);
@@ -167,7 +262,8 @@ pub fn run() {
             screen_capture_permission_status,
             request_screen_capture_permission,
             open_screen_capture_settings,
-            stream_http_request
+            stream_http_request,
+            cancel_http_request
         ])
         .run(tauri::generate_context!())
         .expect("error while running Clarity");
@@ -237,6 +333,36 @@ mod macos_screen_capture {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cancel_aborts_running_request() {
+        let state = HttpState::new().expect("client");
+        let registration = state.register("a").expect("registered");
+        state.cancel("a");
+
+        let aborted = tauri::async_runtime::block_on(Abortable::new(
+            std::future::pending::<()>(),
+            registration,
+        ));
+        assert!(aborted.is_err());
+        assert!(state.requests.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn cancel_before_register_prevents_start() {
+        let state = HttpState::new().expect("client");
+        state.cancel("b");
+        assert!(state.register("b").is_none());
+        assert!(state.requests.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn finish_clears_request() {
+        let state = HttpState::new().expect("client");
+        let _registration = state.register("c").expect("registered");
+        state.finish("c");
+        assert!(state.requests.lock().unwrap().is_empty());
+    }
 
     #[test]
     fn allows_known_provider_urls() {
