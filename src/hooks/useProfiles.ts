@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   createProfileDraft,
   createProfileFromDraft,
@@ -10,8 +10,10 @@ import {
   validateProfileDraft,
   type ProfileDraft,
   type ProfileState,
+  type ModelProfile,
   type ProviderId
 } from "../lib/modelProfiles";
+import { deleteStoredApiKey, isTauriRuntime, storeApiKey } from "../lib/tauri";
 
 export function useProfiles() {
   const [profileState, setProfileState] = useState<ProfileState>(() => loadProfileState());
@@ -24,6 +26,51 @@ export function useProfiles() {
   );
 
   const activeProfile = getActiveProfile(profileState);
+
+  // Move keys saved before keychain support out of localStorage.
+  useEffect(() => {
+    const legacy = profileState.profiles.filter(
+      (profile) => profile.apiKey && profile.keyStorage !== "keychain"
+    );
+    if (!isTauriRuntime() || legacy.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const migrated = new Map<string, string>();
+      for (const profile of legacy) {
+        if (await storeApiKey(profile.id, profile.apiKey)) {
+          migrated.set(profile.id, profile.apiKey);
+        }
+      }
+      if (cancelled || migrated.size === 0) {
+        return;
+      }
+
+      setProfileState((current) => {
+        const next = {
+          ...current,
+          profiles: current.profiles.map((profile) =>
+            migrated.get(profile.id) === profile.apiKey ? toKeychainProfile(profile) : profile
+          )
+        };
+        persistProfileState(next);
+        return next;
+      });
+      setProfileDraft((draft) =>
+        draft.id && migrated.get(draft.id) === draft.apiKey
+          ? { ...draft, apiKey: "", hasStoredKey: true }
+          : draft
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // Runs once on startup; later saves go through saveProfile.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const commitProfileState = (nextState: ProfileState) => {
     persistProfileState(nextState);
@@ -45,8 +92,8 @@ export function useProfiles() {
     setShowProfilePanel(true);
   };
 
-  /** Returns true when the draft was valid and saved. */
-  const saveProfile = (draft: ProfileDraft): boolean => {
+  /** Resolves true when the draft was valid and saved. */
+  const saveProfile = async (draft: ProfileDraft): Promise<boolean> => {
     const error = validateProfileDraft(draft);
     if (error) {
       setProfileError(error);
@@ -54,7 +101,10 @@ export function useProfiles() {
     }
 
     const existing = profileState.profiles.find((profile) => profile.id === draft.id) ?? null;
-    const savedProfile = createProfileFromDraft(draft, existing);
+    let savedProfile = createProfileFromDraft(draft, existing);
+    if (savedProfile.apiKey && (await storeApiKey(savedProfile.id, savedProfile.apiKey))) {
+      savedProfile = toKeychainProfile(savedProfile);
+    }
     const profiles = existing
       ? profileState.profiles.map((profile) =>
           profile.id === savedProfile.id ? savedProfile : profile
@@ -70,6 +120,7 @@ export function useProfiles() {
   };
 
   const deleteProfile = (profileId: string) => {
+    void deleteStoredApiKey(profileId);
     const profiles = profileState.profiles.filter((profile) => profile.id !== profileId);
     const activeProfileId =
       profileState.activeProfileId === profileId
@@ -130,4 +181,8 @@ export function useProfiles() {
     cancelProfileEdit,
     openProfileSetup
   };
+}
+
+function toKeychainProfile(profile: ModelProfile): ModelProfile {
+  return { ...profile, apiKey: "", keyStorage: "keychain" };
 }

@@ -56,8 +56,8 @@ function App() {
   );
   const { isDropTarget, dropHandlers } = useFileDrop(handleDroppedFiles);
 
-  const saveProfile = (draft: ProfileDraft) => {
-    if (profiles.saveProfile(draft) && state.mode === "Error") {
+  const saveProfile = async (draft: ProfileDraft) => {
+    if ((await profiles.saveProfile(draft)) && state.mode === "Error") {
       dispatch({ type: "RESET_ERROR" });
     }
   };
@@ -112,7 +112,7 @@ function App() {
             onDraft={profiles.setProfileDraft}
             onNewProfile={profiles.startNewProfile}
             onProvider={profiles.changeDraftProvider}
-            onSave={saveProfile}
+            onSave={(draft) => void saveProfile(draft)}
             onSelectProfile={profiles.selectProfile}
           />
         ) : null}

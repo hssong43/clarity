@@ -1,5 +1,5 @@
 import type { ModelProfile, ProviderId } from "./modelProfiles";
-import type { NativeHttpRequest } from "./tauri";
+import type { NativeAuthScheme, NativeHttpRequest } from "./tauri";
 import { isAbortError, streamNativeHttp } from "./tauri";
 import { formatBytes } from "./attachments";
 import type {
@@ -67,66 +67,64 @@ export function buildProviderHttpRequest(
   }
 }
 
+type RequestProfile = Pick<ModelProfile, "apiKey" | "model"> &
+  Partial<Pick<ModelProfile, "id" | "keyStorage">>;
+
 export function buildOpenAIHttpRequest(
-  profile: Pick<ModelProfile, "apiKey" | "model">,
+  profile: RequestProfile,
   request: VisionChatRequest
 ): NativeHttpRequest {
   return {
     method: "POST",
     url: "https://api.openai.com/v1/responses",
-    headers: [
-      ["Content-Type", "application/json"],
-      ["Authorization", `Bearer ${profile.apiKey}`]
-    ],
+    ...withAuth(profile, "bearer", [["Content-Type", "application/json"]]),
     body: JSON.stringify(buildOpenAIResponsesPayload(profile.model, request))
   };
 }
 
 export function buildAnthropicHttpRequest(
-  profile: Pick<ModelProfile, "apiKey" | "model">,
+  profile: RequestProfile,
   request: VisionChatRequest
 ): NativeHttpRequest {
   return {
     method: "POST",
     url: "https://api.anthropic.com/v1/messages",
-    headers: [
+    ...withAuth(profile, "xApiKey", [
       ["Content-Type", "application/json"],
-      ["x-api-key", profile.apiKey],
       ["anthropic-version", "2023-06-01"],
       ...(supportsClaudeRefusalFallbacks(profile.model)
         ? ([["anthropic-beta", "server-side-fallback-2026-07-01"]] as Array<[string, string]>)
         : [])
-    ],
+    ]),
     body: JSON.stringify(buildAnthropicMessagesPayload(profile.model, request))
   };
 }
 
 export function buildGeminiHttpRequest(
-  profile: Pick<ModelProfile, "apiKey" | "model">,
+  profile: RequestProfile,
   request: VisionChatRequest
 ): NativeHttpRequest {
   return {
     method: "POST",
     url: `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
       profile.model
-    )}:streamGenerateContent?alt=sse&key=${encodeURIComponent(profile.apiKey)}`,
-    headers: [["Content-Type", "application/json"]],
+    )}:streamGenerateContent?alt=sse`,
+    ...withAuth(profile, "xGoogApiKey", [["Content-Type", "application/json"]]),
     body: JSON.stringify(buildGeminiGenerateContentPayload(profile.model, request))
   };
 }
 
 export function buildOpenRouterHttpRequest(
-  profile: Pick<ModelProfile, "apiKey" | "model">,
+  profile: RequestProfile,
   request: VisionChatRequest
 ): NativeHttpRequest {
   return {
     method: "POST",
     url: "https://openrouter.ai/api/v1/chat/completions",
-    headers: [
+    ...withAuth(profile, "bearer", [
       ["Content-Type", "application/json"],
-      ["Authorization", `Bearer ${profile.apiKey}`],
       ["X-OpenRouter-Title", "Clarity"]
-    ],
+    ]),
     body: JSON.stringify(buildOpenRouterChatCompletionsPayload(profile.model, request))
   };
 }
@@ -716,4 +714,24 @@ function isOpenAIReasoningModel(model: string): boolean {
 
 function isGemini3Model(model: string): boolean {
   return /^gemini-3/.test(model);
+}
+
+const AUTH_HEADER_NAMES: Record<NativeAuthScheme, string> = {
+  bearer: "Authorization",
+  xApiKey: "x-api-key",
+  xGoogApiKey: "x-goog-api-key"
+};
+
+// Keychain-backed profiles let the native layer attach the key; others send it inline.
+function withAuth(
+  profile: RequestProfile,
+  scheme: NativeAuthScheme,
+  headers: Array<[string, string]>
+): Pick<NativeHttpRequest, "headers" | "auth"> {
+  if (profile.keyStorage === "keychain" && profile.id) {
+    return { headers, auth: { profileId: profile.id, scheme } };
+  }
+
+  const value = scheme === "bearer" ? `Bearer ${profile.apiKey}` : profile.apiKey;
+  return { headers: [...headers, [AUTH_HEADER_NAMES[scheme], value]] };
 }

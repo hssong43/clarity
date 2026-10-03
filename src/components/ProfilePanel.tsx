@@ -35,7 +35,9 @@ export function ProfilePanel({
   onSave,
   onSelectProfile
 }: ProfilePanelProps) {
-  const canSubmit = Boolean(draft.name.trim() && draft.apiKey.trim() && draft.model.trim());
+  const canSubmit = Boolean(
+    draft.name.trim() && (draft.apiKey.trim() || draft.hasStoredKey) && draft.model.trim()
+  );
   const config = providerConfigs[draft.provider];
 
   const submit = (event: FormEvent) => {
@@ -80,7 +82,11 @@ export function ProfilePanel({
           value={draft.apiKey}
           onChange={(event) => onDraft({ ...draft, apiKey: event.target.value })}
           type="password"
-          placeholder={config.keyPlaceholder}
+          placeholder={
+            draft.hasStoredKey
+              ? "Saved in system keychain (type to replace)"
+              : config.keyPlaceholder
+          }
           autoComplete="off"
           spellCheck={false}
         />

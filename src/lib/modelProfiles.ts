@@ -169,10 +169,6 @@ export function validateProfileDraft(draft: ProfileDraft): string | null {
   return null;
 }
 
-export function hasUsableKey(profile: ModelProfile): boolean {
-  return profile.keyStorage === "keychain" || Boolean(profile.apiKey);
-}
-
 export function defaultProfileName(provider: ProviderId): string {
   return providerConfigs[provider].label;
 }

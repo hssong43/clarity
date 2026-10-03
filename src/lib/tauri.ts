@@ -11,11 +11,15 @@ export type ScreenCapturePermission = {
   canRequest: boolean;
 };
 
+export type NativeAuthScheme = "bearer" | "xApiKey" | "xGoogApiKey";
+
 export type NativeHttpRequest = {
   method: "POST";
   url: string;
   headers: Array<[string, string]>;
   body: string;
+  /** Have the native layer attach the profile's API key from the OS keychain. */
+  auth?: { profileId: string; scheme: NativeAuthScheme };
 };
 
 type NativeHttpStreamRequest = NativeHttpRequest & {
@@ -83,6 +87,26 @@ export async function closeOverlayWindow(): Promise<void> {
     return;
   }
   await getCurrentWindow().close();
+}
+
+/** Stores the key in the OS keychain. Resolves false when that is unavailable. */
+export async function storeApiKey(profileId: string, apiKey: string): Promise<boolean> {
+  if (!isTauriRuntime()) {
+    return false;
+  }
+  try {
+    await invoke("set_api_key", { profileId, apiKey });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteStoredApiKey(profileId: string): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke("delete_api_key", { profileId }).catch(() => undefined);
 }
 
 export async function streamNativeHttp(

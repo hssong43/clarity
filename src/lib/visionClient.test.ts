@@ -170,8 +170,9 @@ describe("visionClient provider requests", () => {
     };
 
     expect(nativeRequest.url).toBe(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:streamGenerateContent?alt=sse&key=AIza-test"
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:streamGenerateContent?alt=sse"
     );
+    expect(nativeRequest.headers).toContainEqual(["x-goog-api-key", "AIza-test"]);
     expect(body.generationConfig.maxOutputTokens).toBe(4096);
     expect(body.contents).toHaveLength(3);
     expect(body.contents[0].parts.some((part) => "inlineData" in part)).toBe(false);
@@ -275,6 +276,52 @@ describe("visionClient provider requests", () => {
     expect(body.max_tokens).toBe(16000);
     expect(body.output_config).toEqual({ effort: "low" });
     expect(body.fallbacks).toBe("default");
+  });
+
+  it("lets the native layer attach keychain keys instead of sending them inline", () => {
+    const keychainProfile = { id: "p1", keyStorage: "keychain" as const, apiKey: "" };
+    const cases = [
+      [
+        buildOpenAIHttpRequest({ ...keychainProfile, model: "gpt-5.4-mini" }, historyRequest),
+        "bearer"
+      ],
+      [
+        buildAnthropicHttpRequest(
+          { ...keychainProfile, model: "claude-haiku-4-5" },
+          historyRequest
+        ),
+        "xApiKey"
+      ],
+      [
+        buildGeminiHttpRequest({ ...keychainProfile, model: "gemini-3.8-flash" }, historyRequest),
+        "xGoogApiKey"
+      ],
+      [
+        buildOpenRouterHttpRequest(
+          { ...keychainProfile, model: "openrouter/auto" },
+          historyRequest
+        ),
+        "bearer"
+      ]
+    ] as const;
+
+    for (const [nativeRequest, scheme] of cases) {
+      expect(nativeRequest.auth).toEqual({ profileId: "p1", scheme });
+      const headerNames = nativeRequest.headers.map(([name]) => name.toLowerCase());
+      expect(headerNames).not.toContain("authorization");
+      expect(headerNames).not.toContain("x-api-key");
+      expect(headerNames).not.toContain("x-goog-api-key");
+    }
+  });
+
+  it("sends inline keys when the profile is not keychain-backed", () => {
+    const nativeRequest = buildOpenRouterHttpRequest(
+      { apiKey: "sk-or-test", model: "openrouter/auto" },
+      historyRequest
+    );
+
+    expect(nativeRequest.auth).toBeUndefined();
+    expect(nativeRequest.headers).toContainEqual(["Authorization", "Bearer sk-or-test"]);
   });
 
   it("omits refusal fallbacks for Claude Sonnet 5", () => {

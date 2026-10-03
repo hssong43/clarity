@@ -39,14 +39,14 @@ afterEach(() => {
 });
 
 describe("App", () => {
-  it("asks for a model profile first and collapses to the pill after saving", () => {
+  it("asks for a model profile first and collapses to the pill after saving", async () => {
     render(<App />);
 
     expect(screen.getByText("Profile needed")).toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText("sk-..."), { target: { value: "sk-test" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(screen.getByRole("button", { name: "Clarity overlay" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Clarity overlay" })).toBeInTheDocument();
     const stored = JSON.parse(window.localStorage.getItem(MODEL_PROFILES_STORAGE_KEY) ?? "[]");
     expect(stored).toHaveLength(1);
     expect(stored[0]).toMatchObject({ provider: "openai", apiKey: "sk-test" });
