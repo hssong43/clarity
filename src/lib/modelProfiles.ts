@@ -4,7 +4,9 @@ export type ModelProfile = {
   id: string;
   name: string;
   provider: ProviderId;
+  /** Empty when the key lives in the OS keychain (`keyStorage: "keychain"`). */
   apiKey: string;
+  keyStorage?: "keychain";
   model: string;
   createdAt: string;
   updatedAt: string;
@@ -20,6 +22,8 @@ export type ProfileDraft = {
   name: string;
   provider: ProviderId;
   apiKey: string;
+  /** The profile already has a key in the OS keychain; leaving apiKey blank keeps it. */
+  hasStoredKey: boolean;
   model: string;
 };
 
@@ -123,6 +127,7 @@ export function createProfileDraft(profile?: ModelProfile | null): ProfileDraft 
       name: profile.name,
       provider: profile.provider,
       apiKey: profile.apiKey,
+      hasStoredKey: profile.keyStorage === "keychain",
       model: profile.model
     };
   }
@@ -132,6 +137,7 @@ export function createProfileDraft(profile?: ModelProfile | null): ProfileDraft 
     name: providerConfigs.openai.label,
     provider: "openai",
     apiKey: "",
+    hasStoredKey: false,
     model: providerConfigs.openai.defaultModel
   };
 }
@@ -142,11 +148,14 @@ export function createProfileFromDraft(
   createId = defaultCreateId
 ): ModelProfile {
   const now = new Date().toISOString();
+  const apiKey = draft.apiKey.trim();
+  const keepStoredKey = !apiKey && existing?.keyStorage === "keychain";
   return {
     id: existing?.id ?? draft.id ?? createId(),
     name: draft.name.trim(),
     provider: draft.provider,
-    apiKey: draft.apiKey.trim(),
+    apiKey,
+    ...(keepStoredKey ? { keyStorage: "keychain" as const } : {}),
     model: draft.model.trim(),
     createdAt: existing?.createdAt ?? now,
     updatedAt: now
@@ -155,9 +164,13 @@ export function createProfileFromDraft(
 
 export function validateProfileDraft(draft: ProfileDraft): string | null {
   if (!draft.name.trim()) return "Enter a profile name.";
-  if (!draft.apiKey.trim()) return "Enter an API key.";
+  if (!draft.apiKey.trim() && !draft.hasStoredKey) return "Enter an API key.";
   if (!draft.model.trim()) return "Enter a model ID.";
   return null;
+}
+
+export function hasUsableKey(profile: ModelProfile): boolean {
+  return profile.keyStorage === "keychain" || Boolean(profile.apiKey);
 }
 
 export function defaultProfileName(provider: ProviderId): string {
@@ -191,6 +204,7 @@ function isModelProfile(value: unknown): value is ModelProfile {
     typeof value.name === "string" &&
     isProviderId(value.provider) &&
     typeof value.apiKey === "string" &&
+    (value.keyStorage === undefined || value.keyStorage === "keychain") &&
     typeof value.model === "string" &&
     typeof value.createdAt === "string" &&
     typeof value.updatedAt === "string"
