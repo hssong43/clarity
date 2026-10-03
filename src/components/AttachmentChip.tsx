@@ -58,7 +58,9 @@ function attachmentChipDetails(attachment: PendingAttachment): {
       meta: isScreen
         ? attachment.images.length > 1
           ? `${attachment.images.length} screens`
-          : "screen"
+          : attachment.images[0]?.displayId?.endsWith("-region")
+            ? "region"
+            : "screen"
         : attachment.size
           ? formatBytes(attachment.size)
           : "",

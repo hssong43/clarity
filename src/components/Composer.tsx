@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { Camera, Loader2, Send, Square } from "lucide-react";
+import { Camera, Crop, Loader2, Send, Square } from "lucide-react";
 import type { PendingAttachment } from "../lib/attachments";
 import { AttachmentChip } from "./AttachmentChip";
 
@@ -13,6 +13,7 @@ export function Composer({
   isStreaming,
   captureDisabled,
   onCapture,
+  onCaptureRegion,
   onRemoveAttachment,
   onSend,
   onStop,
@@ -27,6 +28,7 @@ export function Composer({
   isStreaming: boolean;
   captureDisabled: boolean;
   onCapture: () => void;
+  onCaptureRegion: () => void;
   onRemoveAttachment: (id: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
@@ -82,6 +84,16 @@ export function Composer({
           title={hasPendingScreen ? "Replace screen attachment" : "Attach current screen"}
         >
           {isCapturingAttachment ? <Loader2 size={15} className="spin" /> : <Camera size={15} />}
+        </button>
+        <button
+          className="attach-button"
+          type="button"
+          disabled={isBusy || captureDisabled}
+          onClick={onCaptureRegion}
+          title="Attach a screen region"
+          aria-label="Attach a screen region"
+        >
+          <Crop size={15} />
         </button>
         <input
           ref={inputRef}

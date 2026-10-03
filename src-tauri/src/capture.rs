@@ -69,7 +69,7 @@ fn capture_monitor(index: usize, monitor: Monitor) -> Result<CapturedImage, Stri
     })
 }
 
-fn hide_overlay(app: &AppHandle) -> bool {
+pub fn hide_overlay(app: &AppHandle) -> bool {
     let Some(window) = app.get_webview_window("main") else {
         return false;
     };
@@ -80,7 +80,7 @@ fn hide_overlay(app: &AppHandle) -> bool {
     was_visible
 }
 
-fn restore_overlay(app: &AppHandle, was_visible: bool) {
+pub fn restore_overlay(app: &AppHandle, was_visible: bool) {
     if !was_visible {
         return;
     }
@@ -107,7 +107,7 @@ pub fn resize_dimensions(width: u32, height: u32, max_dimension: u32) -> (u32, u
     (next_width, next_height)
 }
 
-fn resize_image(image: &RgbaImage, max_dimension: u32) -> RgbaImage {
+pub fn resize_image(image: &RgbaImage, max_dimension: u32) -> RgbaImage {
     let (width, height) = resize_dimensions(image.width(), image.height(), max_dimension);
     if width == image.width() && height == image.height() {
         return image.clone();

@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow, PhysicalPosition } from "@tauri-apps/api/window";
 import type { CapturedImage } from "../types";
+import type { RegionSelection } from "./region";
 
 export type OverlayMode = "pill" | "panel";
 
@@ -36,6 +37,17 @@ type NativeHttpStreamEvent = {
 const OVERLAY_POSITION_KEY = "clarity.overlay.position.v1";
 const NATIVE_HTTP_STREAM_EVENT = "clarity-native-http-stream";
 const CAPTURE_SHORTCUT_EVENT = "clarity-capture-shortcut";
+const REGION_RESULT_EVENT = "clarity-region-captured";
+
+export type RegionPreview = {
+  displayId: string;
+  dataUrl: string;
+  width: number;
+  height: number;
+  isDefault: boolean;
+};
+
+type RegionResult = { image: CapturedImage | null; error: string | null };
 
 export function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -46,6 +58,45 @@ export async function captureScreens(): Promise<CapturedImage[]> {
     throw new Error("Tauri desktop runtime is required for screen capture.");
   }
   return invoke<CapturedImage[]>("capture_screens");
+}
+
+/**
+ * Opens the region selector and resolves with the cropped image, or null when
+ * the user cancels.
+ */
+export async function captureRegion(): Promise<CapturedImage | null> {
+  if (!isTauriRuntime()) {
+    throw new Error("Tauri desktop runtime is required for screen capture.");
+  }
+
+  let unlisten: (() => void) | undefined;
+  try {
+    const result = await new Promise<RegionResult>((resolve, reject) => {
+      void listen<RegionResult>(REGION_RESULT_EVENT, ({ payload }) => resolve(payload))
+        .then((nextUnlisten) => {
+          unlisten = nextUnlisten;
+          return invoke("start_region_capture");
+        })
+        .catch(reject);
+    });
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    return result.image;
+  } finally {
+    unlisten?.();
+  }
+}
+
+export async function getRegionPreviews(): Promise<RegionPreview[]> {
+  return invoke<RegionPreview[]>("region_capture_previews");
+}
+
+export async function finishRegionCapture(
+  displayId: string | null,
+  selection: RegionSelection | null
+): Promise<void> {
+  await invoke("finish_region_capture", { displayId, selection });
 }
 
 export async function setOverlayMode(mode: OverlayMode): Promise<void> {

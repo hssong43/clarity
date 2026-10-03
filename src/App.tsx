@@ -168,6 +168,7 @@ function App() {
               isStreaming={state.mode === "Streaming"}
               captureDisabled={needsPermission}
               onCapture={() => void attachments.captureScreenAttachment()}
+              onCaptureRegion={() => void attachments.captureScreenAttachment("region")}
               onRemoveAttachment={attachments.removeAttachment}
               onSend={sendQuestion}
               onStop={stopStreaming}
