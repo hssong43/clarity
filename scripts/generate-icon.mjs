@@ -17,9 +17,10 @@ for (let y = 0; y < size; y += 1) {
     const distance = Math.sqrt(dx * dx + dy * dy);
     const inside = distance <= radius;
     const ring = distance > radius * 0.86 && distance <= radius;
-    const sparkle = pointInDiamond(x, y, center, center, 154, 154)
-      || pointInDiamond(x, y, center + 170, center - 170, 66, 66)
-      || pointInDiamond(x, y, center - 198, center + 128, 48, 48);
+    const sparkle =
+      pointInDiamond(x, y, center, center, 154, 154) ||
+      pointInDiamond(x, y, center + 170, center - 170, 66, 66) ||
+      pointInDiamond(x, y, center - 198, center + 128, 48, 48);
 
     if (inside) {
       rgba[i] = ring ? 119 : 21;
@@ -104,7 +105,14 @@ function installerPixel(x, y, width, height) {
   const shade = Math.round(17 + t * 22);
   const cx = width * 0.78;
   const cy = height * 0.44;
-  const sparkle = pointInDiamond(x, y, cx, cy, Math.min(width, height) * 0.36, Math.min(width, height) * 0.36);
+  const sparkle = pointInDiamond(
+    x,
+    y,
+    cx,
+    cy,
+    Math.min(width, height) * 0.36,
+    Math.min(width, height) * 0.36
+  );
   return sparkle ? [248, 252, 255] : [shade, shade + 7, shade + 16];
 }
 

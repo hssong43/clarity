@@ -1,11 +1,6 @@
 import type { StreamStopReason, VisionAction } from "../types";
 
-export type ClarityMode =
-  | "IdlePill"
-  | "ExpandedReady"
-  | "Capturing"
-  | "Streaming"
-  | "Error";
+export type ClarityMode = "IdlePill" | "ExpandedReady" | "Capturing" | "Streaming" | "Error";
 
 export type ChatMessage = {
   id: string;
@@ -44,10 +39,7 @@ export const initialClarityState: ClarityState = {
   error: null
 };
 
-export function clarityReducer(
-  state: ClarityState,
-  event: ClarityEvent
-): ClarityState {
+export function clarityReducer(state: ClarityState, event: ClarityEvent): ClarityState {
   switch (event.type) {
     case "EXPAND":
       return { ...state, mode: "ExpandedReady", error: null };
@@ -91,10 +83,7 @@ export function clarityReducer(
         lastStopReason: event.reason ?? "complete",
         lastStopMessage: event.message ?? null,
         messages: content
-          ? [
-              ...state.messages,
-              { id: crypto.randomUUID(), role: "assistant", content }
-            ]
+          ? [...state.messages, { id: crypto.randomUUID(), role: "assistant", content }]
           : state.messages
       };
     }

@@ -44,12 +44,7 @@ export type PendingAttachment =
 
 type FileKind = "image" | "pdf" | "docx" | "text";
 
-const IMAGE_MIME_TYPES = new Set<ImageMime>([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif"
-]);
+const IMAGE_MIME_TYPES = new Set<ImageMime>(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 const TEXT_EXTENSIONS = new Set([
   "txt",
