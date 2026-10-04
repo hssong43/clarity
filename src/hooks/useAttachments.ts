@@ -8,6 +8,7 @@ import {
   type PendingAttachment
 } from "../lib/attachments";
 import { captureRegion, captureScreens, type ScreenCapturePermission } from "../lib/tauri";
+import type { CapturedImage } from "../types";
 
 export function useAttachments({
   mode,
@@ -72,6 +73,41 @@ export function useAttachments({
     [dispatch, pendingAttachments.length, mode]
   );
 
+  /** Throws when there is no room; a screen attachment replaces the previous one. */
+  const addScreenImages = useCallback(
+    (images: CapturedImage[]) => {
+      if (!hasPendingScreen && pendingAttachments.length >= MAX_PENDING_ATTACHMENTS) {
+        throw new Error(
+          `Remove an attachment first. Clarity supports ${MAX_PENDING_ATTACHMENTS} at once.`
+        );
+      }
+
+      setPendingAttachments((current) => [
+        ...current.filter((attachment) => !isScreenAttachment(attachment)),
+        createScreenAttachment(images)
+      ]);
+      if (mode === "Error") {
+        dispatch({ type: "RESET_ERROR" });
+      }
+    },
+    [dispatch, hasPendingScreen, mode, pendingAttachments.length]
+  );
+
+  /** Attaches an image the native layer already captured (a modifier + drag selection). */
+  const attachCapturedImage = useCallback(
+    (image: CapturedImage) => {
+      try {
+        addScreenImages([image]);
+      } catch (error) {
+        dispatch({
+          type: "FAIL",
+          error: error instanceof Error ? error.message : "The screenshot could not be attached."
+        });
+      }
+    },
+    [addScreenImages, dispatch]
+  );
+
   /** "region" lets the user drag a rectangle; cancelling it leaves attachments as they were. */
   const captureScreenAttachment = useCallback(
     async (area: "full" | "region" = "full") => {
@@ -99,19 +135,7 @@ export function useAttachments({
           throw new Error("No screens were captured.");
         }
 
-        if (!hasPendingScreen && pendingAttachments.length >= MAX_PENDING_ATTACHMENTS) {
-          throw new Error(
-            `Remove an attachment first. Clarity supports ${MAX_PENDING_ATTACHMENTS} at once.`
-          );
-        }
-
-        setPendingAttachments((current) => [
-          ...current.filter((attachment) => !isScreenAttachment(attachment)),
-          createScreenAttachment(images)
-        ]);
-        if (mode === "Error") {
-          dispatch({ type: "RESET_ERROR" });
-        }
+        addScreenImages(images);
       } catch (error) {
         dispatch({
           type: "FAIL",
@@ -121,14 +145,7 @@ export function useAttachments({
         setIsCapturingAttachment(false);
       }
     },
-    [
-      dispatch,
-      hasPendingScreen,
-      pendingAttachments.length,
-      permission.granted,
-      permission.supported,
-      mode
-    ]
+    [addScreenImages, dispatch, permission.granted, permission.supported]
   );
 
   const removeAttachment = useCallback((id: string) => {
@@ -145,6 +162,7 @@ export function useAttachments({
     hasReadyAttachments,
     attachFiles,
     captureScreenAttachment,
+    attachCapturedImage,
     removeAttachment,
     clearAttachments
   };

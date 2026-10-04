@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Keyboard } from "lucide-react";
+import { Keyboard, MousePointerClick } from "lucide-react";
+import { modifierLabel, type PointerModifier } from "../lib/pointer";
 import {
   DEFAULT_SHORTCUTS,
   formatShortcut,
@@ -16,14 +17,37 @@ const ROWS: Array<{ area: CaptureArea; label: string }> = [
 export function ShortcutSettings({
   shortcuts,
   error,
-  onChange
+  modifier,
+  onChange,
+  onModifierChange
 }: {
   shortcuts: CaptureShortcuts;
   error: string | null;
+  modifier: PointerModifier;
   onChange: (area: CaptureArea, shortcut: string) => void;
+  onModifierChange: (modifier: PointerModifier) => void;
 }) {
   return (
     <section className="shortcut-settings" aria-label="Capture shortcuts">
+      <div className="shortcut-row">
+        <MousePointerClick size={15} aria-hidden="true" />
+        <span className="shortcut-copy">
+          <span>Mouse key</span>
+          <small>Hold it and click to open Clarity, or drag to attach that region.</small>
+        </span>
+      </div>
+      <div className="modifier-choice" role="group" aria-label="Mouse key">
+        {(["alt", "primary"] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={modifier === option}
+            onClick={() => onModifierChange(option)}
+          >
+            {modifierLabel(option)}
+          </button>
+        ))}
+      </div>
       <div className="shortcut-row">
         <Keyboard size={15} aria-hidden="true" />
         <span className="shortcut-copy">

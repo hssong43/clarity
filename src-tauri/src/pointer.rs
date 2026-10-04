@@ -129,8 +129,14 @@ pub enum Gesture {
     /// Modifier + click, reported on release.
     Click,
     DragStart(Point),
-    DragMove { start: Point, current: Point },
-    DragEnd { start: Point, end: Point },
+    DragMove {
+        start: Point,
+        current: Point,
+    },
+    DragEnd {
+        start: Point,
+        end: Point,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -639,9 +645,18 @@ mod tests {
             height: 800.0,
         };
         let size = (100.0, 100.0);
-        assert_eq!(place_near(at(200.0, 200.0), size, 20.0, bounds), at(220.0, 220.0));
-        assert_eq!(place_near(at(950.0, 200.0), size, 20.0, bounds), at(830.0, 220.0));
-        assert_eq!(place_near(at(200.0, 790.0), size, 20.0, bounds), at(220.0, 670.0));
+        assert_eq!(
+            place_near(at(200.0, 200.0), size, 20.0, bounds),
+            at(220.0, 220.0)
+        );
+        assert_eq!(
+            place_near(at(950.0, 200.0), size, 20.0, bounds),
+            at(830.0, 220.0)
+        );
+        assert_eq!(
+            place_near(at(200.0, 790.0), size, 20.0, bounds),
+            at(220.0, 670.0)
+        );
     }
 
     #[test]

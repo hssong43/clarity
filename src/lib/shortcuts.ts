@@ -97,6 +97,6 @@ export function formatShortcut(shortcut: string, isMac = isMacPlatform()): strin
     .join("+");
 }
 
-function isMacPlatform(): boolean {
+export function isMacPlatform(): boolean {
   return typeof navigator !== "undefined" && /Mac/i.test(navigator.userAgent);
 }

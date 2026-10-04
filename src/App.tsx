@@ -4,7 +4,7 @@ import { Conversation } from "./components/Conversation";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { PanelHeader } from "./components/PanelHeader";
 import { PermissionNotice } from "./components/PermissionNotice";
-import { Pill } from "./components/Pill";
+import { Orb } from "./components/Orb";
 import { ProfilePanel } from "./components/ProfilePanel";
 import { ShortcutSettings } from "./components/ShortcutSettings";
 import { useAttachments } from "./hooks/useAttachments";
@@ -13,6 +13,7 @@ import { useChatStream } from "./hooks/useChatStream";
 import { useConversations } from "./hooks/useConversations";
 import { useFileDrop } from "./hooks/useFileDrop";
 import { useOverlayWindow } from "./hooks/useOverlayWindow";
+import { usePointerGesture } from "./hooks/usePointerGesture";
 import { useProfiles } from "./hooks/useProfiles";
 import { useScreenCapturePermission } from "./hooks/useScreenCapturePermission";
 import type { ProfileDraft } from "./lib/modelProfiles";
@@ -33,18 +34,18 @@ function App() {
 
   const hasProfile = Boolean(activeProfile);
   const isBusy = state.mode === "Streaming" || isCapturingAttachment;
-  const showPill = state.mode === "IdlePill" && (hasProfile || !showProfilePanel);
+  const showOrb = state.mode === "IdlePill" && (hasProfile || !showProfilePanel);
 
-  useOverlayWindow(showPill);
+  useOverlayWindow(showOrb);
 
-  const collapseToPill = useCallback(() => {
+  const collapseToOrb = useCallback(() => {
     if (!hasProfile) {
       setShowProfilePanel(false);
     }
     dispatch({ type: "COLLAPSE" });
   }, [dispatch, hasProfile, setShowProfilePanel]);
 
-  const expandFromPill = useCallback(() => {
+  const expandFromOrb = useCallback(() => {
     if (!hasProfile) {
       setShowProfilePanel(true);
     }
@@ -53,28 +54,44 @@ function App() {
 
   const handleDroppedFiles = useCallback(
     (files: FileList) => {
-      if (showPill) {
-        expandFromPill();
+      if (showOrb) {
+        expandFromOrb();
       }
       attachFiles(files);
     },
-    [attachFiles, expandFromPill, showPill]
+    [attachFiles, expandFromOrb, showOrb]
   );
   const { isDropTarget, dropHandlers } = useFileDrop(handleDroppedFiles);
 
   const [composerFocusRequest, setComposerFocusRequest] = useState(0);
-  const { shortcuts, shortcutError, updateShortcut } = useCaptureShortcuts((area) => {
+  /** Opens the panel for a capture. False when a profile still has to be set up first. */
+  const revealForCapture = () => {
     if (!activeProfile || showProfilePanel) {
-      expandFromPill();
-      return;
+      expandFromOrb();
+      return false;
     }
     if (state.mode === "IdlePill") {
       dispatch({ type: "EXPAND" });
     }
-    if (!isBusy) {
+    setComposerFocusRequest((request) => request + 1);
+    return true;
+  };
+
+  const { shortcuts, shortcutError, updateShortcut } = useCaptureShortcuts((area) => {
+    if (revealForCapture() && !isBusy) {
       void attachments.captureScreenAttachment(area);
     }
-    setComposerFocusRequest((request) => request + 1);
+  });
+
+  const { modifier, updateModifier } = usePointerGesture((event) => {
+    if (!revealForCapture() || event.kind !== "region" || isBusy) {
+      return;
+    }
+    if (event.error) {
+      dispatch({ type: "FAIL", error: event.error });
+    } else if (event.image) {
+      attachments.attachCapturedImage(event.image);
+    }
   });
 
   const saveProfile = async (draft: ProfileDraft) => {
@@ -95,10 +112,8 @@ function App() {
     });
   };
 
-  if (showPill) {
-    return (
-      <Pill isDropTarget={isDropTarget} dropHandlers={dropHandlers} onExpand={expandFromPill} />
-    );
+  if (showOrb) {
+    return <Orb onExpand={expandFromOrb} />;
   }
 
   const showAssistant = Boolean(activeProfile) && !showProfilePanel;
@@ -124,7 +139,7 @@ function App() {
           setShowHistory(false);
         }}
         onToggleHistory={() => setShowHistory((open) => !open)}
-        onMinimize={collapseToPill}
+        onMinimize={collapseToOrb}
         onClose={() => void closeOverlayWindow()}
       />
 
@@ -146,7 +161,9 @@ function App() {
               <ShortcutSettings
                 shortcuts={shortcuts}
                 error={shortcutError}
+                modifier={modifier}
                 onChange={(area, next) => void updateShortcut(area, next)}
+                onModifierChange={updateModifier}
               />
             }
           />
