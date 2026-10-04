@@ -141,6 +141,19 @@ export async function closeOverlayWindow(): Promise<void> {
   await getCurrentWindow().close();
 }
 
+/** Opens an http(s) link in the default browser instead of navigating the overlay. */
+export async function openExternalUrl(url: string): Promise<void> {
+  if (!/^https?:\/\//i.test(url)) {
+    return;
+  }
+  if (!isTauriRuntime()) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+  const { openUrl } = await import("@tauri-apps/plugin-opener");
+  await openUrl(url);
+}
+
 /** Registers the global capture shortcut; "" unregisters it. */
 export async function setCaptureShortcut(shortcut: string): Promise<void> {
   if (!isTauriRuntime()) {
