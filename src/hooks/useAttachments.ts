@@ -7,7 +7,7 @@ import {
   resolveUploadAttachment,
   type PendingAttachment
 } from "../lib/attachments";
-import { captureScreens, type ScreenCapturePermission } from "../lib/tauri";
+import { captureRegion, captureScreens, type ScreenCapturePermission } from "../lib/tauri";
 
 export function useAttachments({
   mode,
@@ -72,51 +72,64 @@ export function useAttachments({
     [dispatch, pendingAttachments.length, mode]
   );
 
-  const captureScreenAttachment = useCallback(async () => {
-    if (permission.supported && !permission.granted) {
-      dispatch({
-        type: "FAIL",
-        error: "Screen recording permission is required on macOS."
-      });
-      return;
-    }
-
-    setIsCapturingAttachment(true);
-    try {
-      const images = await captureScreens();
-      if (images.length === 0) {
-        throw new Error("No screens were captured.");
+  /** "region" lets the user drag a rectangle; cancelling it leaves attachments as they were. */
+  const captureScreenAttachment = useCallback(
+    async (area: "full" | "region" = "full") => {
+      if (permission.supported && !permission.granted) {
+        dispatch({
+          type: "FAIL",
+          error: "Screen recording permission is required on macOS."
+        });
+        return;
       }
 
-      if (!hasPendingScreen && pendingAttachments.length >= MAX_PENDING_ATTACHMENTS) {
-        throw new Error(
-          `Remove an attachment first. Clarity supports ${MAX_PENDING_ATTACHMENTS} at once.`
-        );
-      }
+      setIsCapturingAttachment(true);
+      try {
+        let images;
+        if (area === "region") {
+          const region = await captureRegion();
+          if (!region) {
+            return;
+          }
+          images = [region];
+        } else {
+          images = await captureScreens();
+        }
+        if (images.length === 0) {
+          throw new Error("No screens were captured.");
+        }
 
-      setPendingAttachments((current) => [
-        ...current.filter((attachment) => !isScreenAttachment(attachment)),
-        createScreenAttachment(images)
-      ]);
-      if (mode === "Error") {
-        dispatch({ type: "RESET_ERROR" });
+        if (!hasPendingScreen && pendingAttachments.length >= MAX_PENDING_ATTACHMENTS) {
+          throw new Error(
+            `Remove an attachment first. Clarity supports ${MAX_PENDING_ATTACHMENTS} at once.`
+          );
+        }
+
+        setPendingAttachments((current) => [
+          ...current.filter((attachment) => !isScreenAttachment(attachment)),
+          createScreenAttachment(images)
+        ]);
+        if (mode === "Error") {
+          dispatch({ type: "RESET_ERROR" });
+        }
+      } catch (error) {
+        dispatch({
+          type: "FAIL",
+          error: error instanceof Error ? error.message : "The screenshot could not be captured."
+        });
+      } finally {
+        setIsCapturingAttachment(false);
       }
-    } catch (error) {
-      dispatch({
-        type: "FAIL",
-        error: error instanceof Error ? error.message : "The screenshot could not be captured."
-      });
-    } finally {
-      setIsCapturingAttachment(false);
-    }
-  }, [
-    dispatch,
-    hasPendingScreen,
-    pendingAttachments.length,
-    permission.granted,
-    permission.supported,
-    mode
-  ]);
+    },
+    [
+      dispatch,
+      hasPendingScreen,
+      pendingAttachments.length,
+      permission.granted,
+      permission.supported,
+      mode
+    ]
+  );
 
   const removeAttachment = useCallback((id: string) => {
     setPendingAttachments((current) => current.filter((candidate) => candidate.id !== id));

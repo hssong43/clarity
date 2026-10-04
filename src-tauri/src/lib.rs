@@ -1,4 +1,5 @@
 mod capture;
+mod region;
 mod secrets;
 
 use std::collections::HashMap;
@@ -328,6 +329,7 @@ pub fn run() {
     builder
         .setup(|app| {
             app.manage(HttpState::new()?);
+            app.manage(region::RegionState::default());
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_always_on_top(true);
                 let _ = window.set_skip_taskbar(true);
@@ -344,7 +346,10 @@ pub fn run() {
             cancel_http_request,
             set_api_key,
             delete_api_key,
-            set_capture_shortcut
+            set_capture_shortcut,
+            region::start_region_capture,
+            region::region_capture_previews,
+            region::finish_region_capture
         ])
         .run(tauri::generate_context!())
         .expect("error while running Clarity");

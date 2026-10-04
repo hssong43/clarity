@@ -549,7 +549,7 @@ select:focus-visible {
   min-height: 54px;
   border-radius: 999px;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto auto 1fr auto;
   align-items: center;
   gap: 8px;
   padding: 8px;
@@ -990,4 +990,69 @@ select:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+.region-selector {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  cursor: crosshair;
+  user-select: none;
+  touch-action: none;
+}
+
+.region-image {
+  position: absolute;
+  pointer-events: none;
+}
+
+.region-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.region-dim.is-hidden {
+  display: none;
+}
+
+.region-box {
+  position: absolute;
+  border: 1.5px solid rgba(151, 217, 255, 0.95);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.region-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(18, 21, 28, 0.78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  font-size: 13px;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.region-toolbar button {
+  min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.11);
+  color: #fff;
+  padding: 0 12px;
+}
+
+.region-toolbar button.is-active {
+  border-color: rgba(151, 217, 255, 0.42);
+  background: rgba(93, 187, 255, 0.22);
 }

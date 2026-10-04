@@ -3,12 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { MODEL_PROFILES_STORAGE_KEY } from "./lib/modelProfiles";
 import { CAPTURE_SHORTCUT_STORAGE_KEY } from "./lib/shortcuts";
-import { captureScreens, onCaptureShortcut, setCaptureShortcut } from "./lib/tauri";
+import { captureRegion, captureScreens, onCaptureShortcut, setCaptureShortcut } from "./lib/tauri";
 
 vi.mock("./lib/visionClient", () => ({ streamVisionChat: vi.fn() }));
 vi.mock("./lib/tauri", async (importActual) => ({
   ...(await importActual<typeof import("./lib/tauri")>()),
   captureScreens: vi.fn(),
+  captureRegion: vi.fn(),
   onCaptureShortcut: vi.fn(),
   setCaptureShortcut: vi.fn()
 }));
@@ -122,5 +123,52 @@ describe("capture shortcut", () => {
     expect(setCaptureShortcut).toHaveBeenLastCalledWith("CommandOrControl+Shift+Space");
     expect(window.localStorage.getItem(CAPTURE_SHORTCUT_STORAGE_KEY)).toBeNull();
     expect(field).toHaveValue("Ctrl+Shift+Space");
+  });
+});
+
+describe("region capture", () => {
+  async function openPanel() {
+    seedProfile();
+    await act(async () => {
+      render(<App />);
+    });
+    fireEvent.keyDown(screen.getByRole("button", { name: "Clarity overlay" }), { key: "Enter" });
+  }
+
+  it("attaches the selected region", async () => {
+    vi.mocked(captureRegion).mockResolvedValue({
+      mime: "image/jpeg",
+      dataUrl: "data:image/jpeg;base64,AA",
+      width: 400,
+      height: 200,
+      displayId: "1-region"
+    });
+    await openPanel();
+
+    await act(async () => fireEvent.click(screen.getByTitle("Attach a screen region")));
+
+    expect(captureRegion).toHaveBeenCalledOnce();
+    expect(captureScreens).not.toHaveBeenCalled();
+    expect(screen.getByText("Screen attached")).toBeInTheDocument();
+    expect(screen.getByText("region")).toBeInTheDocument();
+  });
+
+  it("does nothing when the selection is cancelled", async () => {
+    vi.mocked(captureRegion).mockResolvedValue(null);
+    await openPanel();
+
+    await act(async () => fireEvent.click(screen.getByTitle("Attach a screen region")));
+
+    expect(screen.queryByLabelText("Pending attachments")).not.toBeInTheDocument();
+    expect(screen.queryByText("Needs attention")).not.toBeInTheDocument();
+  });
+
+  it("reports region capture failures", async () => {
+    vi.mocked(captureRegion).mockRejectedValue(new Error("Select a larger region"));
+    await openPanel();
+
+    await act(async () => fireEvent.click(screen.getByTitle("Attach a screen region")));
+
+    expect(screen.getByText("Select a larger region")).toBeInTheDocument();
   });
 });

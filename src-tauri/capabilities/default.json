@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
-  "description": "Capability for the Clarity overlay window",
-  "windows": ["main"],
+  "description": "Capability for the Clarity overlay and region selector windows",
+  "windows": ["main", "region"],
   "permissions": [
     "core:default",
     "core:window:default",
