@@ -626,6 +626,8 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-global-shortcut",
  "tauri-plugin-opener",
+ "window-vibrancy",
+ "windows-sys 0.61.2",
  "xcap",
 ]
 

@@ -107,6 +107,16 @@ export async function setOverlayMode(mode: OverlayMode): Promise<void> {
   await invoke("set_overlay_mode", { mode });
 }
 
+export type NativeGlassKind = "none" | "liquid" | "vibrancy" | "acrylic";
+
+/** The OS material the window sits on; "none" outside Tauri or when unsupported. */
+export async function getNativeGlassKind(): Promise<NativeGlassKind> {
+  if (!isTauriRuntime()) {
+    return "none";
+  }
+  return invoke<NativeGlassKind>("native_glass_kind").catch(() => "none" as const);
+}
+
 export async function getScreenCapturePermission(): Promise<ScreenCapturePermission> {
   if (!isTauriRuntime()) {
     return { supported: false, granted: true, canRequest: false };
