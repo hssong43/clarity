@@ -258,9 +258,77 @@ describe("visionClient provider requests", () => {
     expect(prompt).toContain("do not reference screen contents");
     expect(prompt).not.toContain("clear Korean");
   });
+
+  it("omits sampling params and enables refusal fallbacks for adaptive Claude models", () => {
+    const nativeRequest = buildAnthropicHttpRequest(
+      { apiKey: "sk-ant-test", model: "claude-sonnet-5-5" },
+      historyRequest
+    );
+    const body = JSON.parse(nativeRequest.body) as Record<string, unknown>;
+
+    expect(nativeRequest.headers).toContainEqual([
+      "anthropic-beta",
+      "server-side-fallback-2026-07-01"
+    ]);
+    expect(body).not.toHaveProperty("temperature");
+    expect(body.max_tokens).toBe(16000);
+    expect(body.output_config).toEqual({ effort: "low" });
+    expect(body.fallbacks).toBe("default");
+  });
+
+  it("omits refusal fallbacks for Claude Sonnet 5", () => {
+    const nativeRequest = buildAnthropicHttpRequest(
+      { apiKey: "sk-ant-test", model: "claude-sonnet-5" },
+      historyRequest
+    );
+    const body = JSON.parse(nativeRequest.body) as Record<string, unknown>;
+
+    expect(nativeRequest.headers.map(([name]) => name)).not.toContain("anthropic-beta");
+    expect(body).not.toHaveProperty("temperature");
+    expect(body).not.toHaveProperty("fallbacks");
+  });
+
+  it("keeps temperature and no beta header for Claude Haiku 4.5", () => {
+    const nativeRequest = buildAnthropicHttpRequest(
+      { apiKey: "sk-ant-test", model: "claude-haiku-4-5" },
+      historyRequest
+    );
+    const body = JSON.parse(nativeRequest.body) as Record<string, unknown>;
+
+    expect(nativeRequest.headers.map(([name]) => name)).not.toContain("anthropic-beta");
+    expect(body.temperature).toBe(0.2);
+    expect(body.max_tokens).toBe(4096);
+    expect(body).not.toHaveProperty("output_config");
+    expect(body).not.toHaveProperty("fallbacks");
+  });
+
+  it("uses reasoning effort instead of temperature for GPT-5 models", () => {
+    const body = JSON.parse(
+      buildOpenAIHttpRequest({ apiKey: "sk-test", model: "gpt-5.4-mini" }, historyRequest).body
+    ) as Record<string, unknown>;
+
+    expect(body).not.toHaveProperty("temperature");
+    expect(body.reasoning).toEqual({ effort: "low" });
+  });
+
+  it("uses the default temperature for Gemini 3 models", () => {
+    const body = JSON.parse(
+      buildGeminiHttpRequest({ apiKey: "AIza-test", model: "gemini-3.8-flash" }, historyRequest)
+        .body
+    ) as { generationConfig: Record<string, unknown> };
+
+    expect(body.generationConfig).not.toHaveProperty("temperature");
+    expect(body.generationConfig.maxOutputTokens).toBe(4096);
+  });
 });
 
 describe("visionClient provider stream parsing", () => {
+  it("maps Anthropic refusals to content_filter", () => {
+    expect(
+      extractAnthropicStopReason({ type: "message_delta", delta: { stop_reason: "refusal" } })
+    ).toEqual({ reason: "content_filter", message: "Anthropic stopped because refusal." });
+  });
+
   it("extracts OpenAI text deltas", () => {
     expect(extractOpenAITextDelta({ type: "response.output_text.delta", delta: "hello" })).toBe(
       "hello"
