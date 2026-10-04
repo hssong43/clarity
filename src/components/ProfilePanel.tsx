@@ -1,5 +1,6 @@
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, KeyRound, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronDown, KeyRound, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { fetchProviderModels } from "../lib/modelCatalog";
 import {
   providerConfigs,
   providerIds,
@@ -96,8 +97,10 @@ export function ProfilePanel({
       </label>
 
       <ModelSelector
+        apiKey={draft.apiKey}
         model={draft.model}
         provider={draft.provider}
+        storedKeyProfileId={draft.hasStoredKey ? draft.id : null}
         onModel={(model) => onDraft({ ...draft, model })}
       />
 
@@ -219,42 +222,178 @@ function ProviderSelector({
 }
 
 function ModelSelector({
+  apiKey,
   model,
   provider,
+  storedKeyProfileId,
   onModel
 }: {
+  apiKey: string;
   model: string;
   provider: ProviderId;
+  storedKeyProfileId: string | null;
   onModel: (model: string) => void;
 }) {
   const config = providerConfigs[provider];
+  const [isOpen, setIsOpen] = useState(false);
+  const [filter, setFilter] = useState("");
+  const [fetched, setFetched] = useState<{ provider: ProviderId; models: string[] } | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  const hasCredentials = Boolean(apiKey.trim() || storedKeyProfileId);
+  const trimmedKey = apiKey.trim();
+
+  // Load the provider's model list once a key is available; re-run when the key or provider changes.
+  useEffect(() => {
+    if (!hasCredentials) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setStatus("loading");
+      setFetchError(null);
+      fetchProviderModels(provider, { apiKey: trimmedKey, storedKeyProfileId }, controller.signal)
+        .then((models) => {
+          setFetched({ provider, models });
+          setStatus("idle");
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          setStatus("error");
+          setFetchError(error instanceof Error ? error.message : String(error));
+        });
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [hasCredentials, provider, trimmedKey, storedKeyProfileId, refreshTick]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
+    };
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
+  const loaded = fetched?.provider === provider ? fetched.models : null;
+  const allModels = loaded ?? config.modelOptions;
+  const query = filter.trim().toLowerCase();
+  const visible = query ? allModels.filter((id) => id.toLowerCase().includes(query)) : allModels;
+  const canUseTyped = Boolean(query) && !allModels.some((id) => id.toLowerCase() === query);
+
+  const choose = (value: string) => {
+    onModel(value);
+    setIsOpen(false);
+    setFilter("");
+  };
+
+  const hint = !hasCredentials
+    ? "Add an API key to load every model."
+    : status === "loading"
+      ? "Loading models..."
+      : status === "error"
+        ? `${fetchError ?? "Could not load models."} Showing suggestions.`
+        : loaded
+          ? `${loaded.length} models available`
+          : hasCredentials
+            ? null
+            : "Add an API key to load every model.";
 
   return (
     <section className="field-label model-field" aria-label="Model">
-      Model
-      <input
-        value={model}
-        onChange={(event) => onModel(event.target.value)}
-        placeholder={config.defaultModel}
-        spellCheck={false}
-      />
-      <div className="model-preset-grid" aria-label={`${config.label} model presets`}>
-        {config.modelOptions.map((option) => {
-          const isSelected = option === model;
+      <span className="model-field-heading">
+        Model
+        <button
+          className="model-refresh"
+          type="button"
+          disabled={!hasCredentials || status === "loading"}
+          onClick={() => setRefreshTick((tick) => tick + 1)}
+          title="Reload models"
+          aria-label="Reload models"
+        >
+          <RefreshCw size={12} className={status === "loading" ? "spin" : ""} aria-hidden="true" />
+        </button>
+      </span>
+      <div className="provider-dropdown" ref={rootRef}>
+        <button
+          className="provider-dropdown-trigger"
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((current) => !current)}
+        >
+          <span className="provider-dropdown-copy">
+            <span>{model || config.defaultModel}</span>
+            {hint ? <small>{hint}</small> : null}
+          </span>
+          <ChevronDown className={isOpen ? "is-open" : ""} size={16} aria-hidden="true" />
+        </button>
 
-          return (
-            <button
-              key={option}
-              className={`model-preset ${isSelected ? "is-selected" : ""}`}
-              type="button"
-              aria-pressed={isSelected}
-              onClick={() => onModel(option)}
-            >
-              <span>{option}</span>
-              {isSelected ? <Check size={12} aria-hidden="true" /> : null}
-            </button>
-          );
-        })}
+        {isOpen ? (
+          <div className="provider-dropdown-menu model-menu">
+            <input
+              className="model-search"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="Search or type a model ID"
+              aria-label="Search models"
+              spellCheck={false}
+              autoFocus
+            />
+            <div className="model-menu-list" role="listbox" aria-label="Models">
+              {canUseTyped ? (
+                <button
+                  className="provider-dropdown-option"
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  onClick={() => choose(filter.trim())}
+                >
+                  <span className="provider-dropdown-copy">
+                    <span>Use &quot;{filter.trim()}&quot;</span>
+                    <small>Custom model ID</small>
+                  </span>
+                </button>
+              ) : null}
+              {visible.map((id) => {
+                const isSelected = id === model;
+                return (
+                  <button
+                    key={id}
+                    className={`provider-dropdown-option ${isSelected ? "is-selected" : ""}`}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => choose(id)}
+                  >
+                    <span className="provider-dropdown-copy">
+                      <span>{id}</span>
+                    </span>
+                    {isSelected ? <Check size={13} aria-hidden="true" /> : null}
+                  </button>
+                );
+              })}
+              {visible.length === 0 && !canUseTyped ? (
+                <p className="model-menu-empty">No models match.</p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );

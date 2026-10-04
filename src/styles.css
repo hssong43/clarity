@@ -1324,3 +1324,437 @@ select:focus-visible {
 .history-delete:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* ---- Liquid Glass 2: shared surfaces, rims and remaining components ---- */
+
+:root {
+  --lg-accent: #7cc4ff;
+  --lg-accent-2: #a98bff;
+  --lg-accent-gradient: linear-gradient(135deg, #7cc4ff, #a98bff);
+  --lg-text-dim: rgba(235, 242, 255, 0.64);
+  --lg-field: rgba(5, 8, 20, 0.34);
+  --lg-fill: rgba(255, 255, 255, 0.07);
+  --lg-fill-hover: rgba(255, 255, 255, 0.14);
+  --lg-fill-selected: linear-gradient(135deg, rgba(124, 196, 255, 0.3), rgba(169, 139, 255, 0.26));
+  --lg-rim: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+/* Specular rim: a light edge that is bright top-left and fades toward bottom-right. */
+.glass-sheet::after,
+.glass-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  padding: 1.2px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.85),
+    rgba(255, 255, 255, 0.08) 38%,
+    rgba(255, 255, 255, 0.02) 62%,
+    rgba(255, 255, 255, 0.4)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+.glass-sheet.is-drop-target::after {
+  padding: 0;
+  inset: 8px;
+  background: rgba(93, 187, 255, 0.12);
+  -webkit-mask: none;
+  mask: none;
+  border: 2px dashed rgba(124, 196, 255, 0.8);
+  border-radius: 24px;
+}
+
+/* A soft light caustic that drifts slowly across the sheet. */
+.glass-sheet {
+  background:
+    radial-gradient(120% 60% at 0% 0%, rgba(255, 255, 255, 0.16), transparent 55%),
+    radial-gradient(90% 50% at 100% 100%, rgba(124, 196, 255, 0.1), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)),
+    rgba(14, 18, 34, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -18px 36px -24px rgba(255, 255, 255, 0.2),
+    inset 0 0 40px rgba(255, 255, 255, 0.03);
+}
+
+.glass-sheet::before {
+  animation: lg-drift 14s ease-in-out infinite alternate;
+}
+
+@keyframes lg-drift {
+  from {
+    transform: translateX(-4%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(4%);
+    opacity: 1;
+  }
+}
+
+.glass-pill {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -10px 18px -12px rgba(255, 255, 255, 0.22);
+}
+
+/* Cards, notices and action buttons share one surface. */
+.glass-card,
+.input-dock,
+.notice,
+.error-box,
+.continuation-box,
+.action-button {
+  border: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
+    rgba(8, 12, 28, 0.3);
+  box-shadow:
+    var(--lg-rim),
+    inset 0 -10px 18px -14px rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(22px) saturate(1.8);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8);
+}
+
+.key-panel.glass-card {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.notice,
+.error-box {
+  box-shadow:
+    var(--lg-rim),
+    inset 0 0 0 1px rgba(255, 120, 140, 0.35);
+}
+
+.continuation-box {
+  box-shadow:
+    var(--lg-rim),
+    inset 0 0 0 1px rgba(255, 203, 126, 0.35);
+}
+
+.notice button,
+.error-box button,
+.continuation-box button,
+.key-actions button,
+.shortcut-row button,
+.region-toolbar button {
+  border: 0;
+  background: var(--lg-fill-hover);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.key-actions button[type="submit"] {
+  min-height: 44px;
+  color: #0b1030;
+  font-weight: 700;
+  background: var(--lg-accent-gradient);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 8px 20px rgba(124, 196, 255, 0.35);
+}
+
+.key-actions button[type="submit"]:disabled {
+  color: rgba(255, 255, 255, 0.7);
+  background: var(--lg-fill-hover);
+  box-shadow: none;
+}
+
+.key-actions button {
+  min-height: 44px;
+}
+
+/* Fields */
+.key-panel input,
+.model-search {
+  border: 0;
+  color: #f8fbff;
+  background: var(--lg-field);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.25),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.key-panel input:focus-visible,
+.model-search:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.25),
+    inset 0 0 0 1.5px rgba(124, 196, 255, 0.8),
+    0 0 0 4px rgba(124, 196, 255, 0.15);
+}
+
+.field-label {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--lg-text-dim);
+}
+
+.key-title {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+/* Selectable surfaces: provider/model dropdowns, profile cards, history rows */
+.provider-dropdown-trigger,
+.provider-dropdown-option,
+.profile-card,
+.history-item {
+  border: 0;
+  background: var(--lg-fill);
+  box-shadow: var(--lg-rim);
+}
+
+.provider-dropdown-trigger:hover,
+.provider-dropdown-option:hover,
+.profile-card:hover,
+.history-item:hover {
+  border: 0;
+  background: var(--lg-fill-hover);
+}
+
+.provider-dropdown-option.is-selected,
+.profile-card.is-active,
+.history-item.is-current {
+  border: 0;
+  background: var(--lg-fill-selected);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 0 0 1px rgba(160, 200, 255, 0.6);
+}
+
+.provider-dropdown-option {
+  box-shadow: none;
+  background: transparent;
+}
+
+.provider-dropdown-option:hover {
+  background: var(--lg-fill-hover);
+}
+
+.provider-dropdown-option.is-selected {
+  background: var(--lg-fill-selected);
+}
+
+.provider-dropdown-menu {
+  border: 0;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05)),
+    rgba(16, 20, 38, 0.72);
+  box-shadow:
+    var(--lg-rim),
+    0 24px 48px -12px rgba(0, 0, 20, 0.55);
+  backdrop-filter: blur(30px) saturate(1.9);
+  -webkit-backdrop-filter: blur(30px) saturate(1.9);
+}
+
+.provider-dropdown-copy small {
+  color: var(--lg-text-dim);
+}
+
+.model-field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.model-refresh {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.82);
+  background: var(--lg-fill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.model-refresh:hover:not(:disabled) {
+  background: var(--lg-fill-hover);
+}
+
+.model-refresh:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.model-menu {
+  display: grid;
+  gap: 6px;
+}
+
+.model-search {
+  height: 36px;
+  border-radius: 12px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.model-menu-list {
+  max-height: 204px;
+  overflow-y: auto;
+  display: grid;
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+.model-menu-list .provider-dropdown-option {
+  min-height: 36px;
+}
+
+.model-menu-empty {
+  margin: 8px 0;
+  text-align: center;
+  color: var(--lg-text-dim);
+  font-size: 12px;
+}
+
+.model-preset {
+  border: 0;
+  background: var(--lg-fill);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.model-preset.is-selected {
+  background: rgba(124, 196, 255, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(124, 196, 255, 0.7);
+}
+
+.profile-card-check,
+.profile-card-new > svg,
+.provider-dropdown-trigger > svg,
+.provider-dropdown-option > svg,
+.action-icon {
+  color: var(--lg-accent);
+}
+
+/* Attachments */
+.attachment-chip {
+  border: 0;
+  color: #fff;
+  background: rgba(124, 196, 255, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(124, 196, 255, 0.4);
+}
+
+.attachment-chip.is-error {
+  background: rgba(255, 92, 116, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 140, 156, 0.45);
+}
+
+.attachment-chip.is-reading {
+  background: var(--lg-fill);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.attachment-chip.is-truncated {
+  background: rgba(255, 181, 76, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 203, 126, 0.45);
+}
+
+/* Messages and markdown */
+.copy-button {
+  border: 0;
+  background: var(--lg-fill);
+}
+
+.code-block pre {
+  border-radius: 14px;
+  background: rgba(5, 8, 20, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.markdown code {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 7px;
+}
+
+.markdown a {
+  color: var(--lg-accent);
+}
+
+.markdown blockquote {
+  border-left: 0;
+  border-radius: 12px;
+  background: var(--lg-fill);
+  padding: 8px 12px;
+}
+
+.markdown th,
+.markdown td {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.empty-state {
+  color: var(--lg-text-dim);
+}
+
+.empty-mark {
+  width: 48px;
+  height: 48px;
+}
+
+/* History */
+.history-item {
+  border-radius: 16px;
+}
+
+.history-heading {
+  font-weight: 600;
+}
+
+.shortcut-settings {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.key-panel .shortcut-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+/* Region selector toolbar */
+.region-toolbar {
+  border: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+    rgba(14, 18, 34, 0.7);
+  box-shadow:
+    var(--lg-rim),
+    0 18px 40px -12px rgba(0, 0, 20, 0.6);
+  backdrop-filter: blur(28px) saturate(1.8);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8);
+}
+
+.region-toolbar button.is-active,
+.icon-button.is-active,
+.attach-button.is-active {
+  color: #fff;
+  border: 0;
+  background: rgba(124, 196, 255, 0.26);
+  box-shadow: inset 0 0 0 1px rgba(124, 196, 255, 0.6);
+}
+
+.region-box {
+  border-color: var(--lg-accent);
+}
+
+:focus-visible {
+  outline-color: rgba(124, 196, 255, 0.8);
+}

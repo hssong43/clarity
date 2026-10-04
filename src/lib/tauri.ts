@@ -16,7 +16,7 @@ export type ScreenCapturePermission = {
 export type NativeAuthScheme = "bearer" | "xApiKey" | "xGoogApiKey";
 
 export type NativeHttpRequest = {
-  method: "POST";
+  method: "GET" | "POST";
   url: string;
   headers: Array<[string, string]>;
   body: string;

@@ -219,13 +219,18 @@ async fn run_http_stream(
         headers.insert(name, value);
     }
 
-    let response = client
-        .post(&request.url)
-        .headers(headers)
-        .body(request.body)
-        .send()
-        .await
-        .map_err(describe_http_error)?;
+    let method = match request.method.as_str() {
+        "GET" => reqwest::Method::GET,
+        "POST" => reqwest::Method::POST,
+        _ => return Err("HTTP method is not allowed".to_string()),
+    };
+    let mut builder = client
+        .request(method.clone(), &request.url)
+        .headers(headers);
+    if method == reqwest::Method::POST {
+        builder = builder.body(request.body);
+    }
+    let response = builder.send().await.map_err(describe_http_error)?;
 
     let status = response.status();
     if !status.is_success() {
