@@ -1,6 +1,6 @@
 import type { StreamStopReason, VisionAction } from "../types";
 
-export type ClarityMode = "IdlePill" | "ExpandedReady" | "Capturing" | "Streaming" | "Error";
+export type ClarityMode = "IdleOrb" | "ExpandedReady" | "Capturing" | "Streaming" | "Error";
 
 export type ChatMessage = {
   id: string;
@@ -31,7 +31,7 @@ export type ClarityEvent =
   | { type: "LOAD_CONVERSATION"; messages: ChatMessage[] };
 
 export const initialClarityState: ClarityState = {
-  mode: "IdlePill",
+  mode: "IdleOrb",
   activeAction: null,
   messages: [],
   partialAnswer: "",
@@ -47,7 +47,7 @@ export function clarityReducer(state: ClarityState, event: ClarityEvent): Clarit
     case "COLLAPSE":
       return {
         ...state,
-        mode: "IdlePill",
+        mode: "IdleOrb",
         activeAction: null,
         partialAnswer: "",
         lastStopReason: null,

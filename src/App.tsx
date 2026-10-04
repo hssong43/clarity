@@ -34,7 +34,7 @@ function App() {
 
   const hasProfile = Boolean(activeProfile);
   const isBusy = state.mode === "Streaming" || isCapturingAttachment;
-  const showOrb = state.mode === "IdlePill" && (hasProfile || !showProfilePanel);
+  const showOrb = state.mode === "IdleOrb" && (hasProfile || !showProfilePanel);
 
   useOverlayWindow(showOrb);
 
@@ -70,7 +70,7 @@ function App() {
       expandFromOrb();
       return false;
     }
-    if (state.mode === "IdlePill") {
+    if (state.mode === "IdleOrb") {
       dispatch({ type: "EXPAND" });
     }
     setComposerFocusRequest((request) => request + 1);
