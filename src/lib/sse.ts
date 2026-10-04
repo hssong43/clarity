@@ -61,9 +61,7 @@ function drainPackets(
       onEvent(event);
     }
 
-    const separatorLength = remaining.startsWith("\r\n\r\n", separatorIndex)
-      ? 4
-      : 2;
+    const separatorLength = remaining.startsWith("\r\n\r\n", separatorIndex) ? 4 : 2;
     remaining = remaining.slice(separatorIndex + separatorLength);
     separatorIndex = findSeparator(remaining);
   }

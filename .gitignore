@@ -8,6 +8,7 @@ coverage/
 !.env.example
 src-tauri/target/
 src-tauri/gen/schemas/macOS-schema.json
+src-tauri/gen/schemas/linux-schema.json
 supabase/.branches/
 supabase/.temp/
 supabase/functions/.env

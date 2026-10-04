@@ -203,10 +203,7 @@ function isModelProfile(value: unknown): value is ModelProfile {
 
 function isProviderId(value: unknown): value is ProviderId {
   return (
-    value === "openai" ||
-    value === "anthropic" ||
-    value === "gemini" ||
-    value === "openrouter"
+    value === "openai" || value === "anthropic" || value === "gemini" || value === "openrouter"
   );
 }
 

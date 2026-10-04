@@ -65,7 +65,8 @@ import {
 import { streamVisionChat } from "./lib/visionClient";
 
 const PILL_DRAG_MOVE_PX = 4;
-const CONTINUE_PROMPT = "Continue exactly from where you stopped. Do not restart or repeat previous text.";
+const CONTINUE_PROMPT =
+  "Continue exactly from where you stopped. Do not restart or repeat previous text.";
 
 function App() {
   const [state, dispatch] = useReducer(clarityReducer, initialClarityState);
@@ -82,7 +83,9 @@ function App() {
     createProfileDraft(getActiveProfile(loadProfileState()))
   );
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [showProfilePanel, setShowProfilePanel] = useState(() => !getActiveProfile(loadProfileState()));
+  const [showProfilePanel, setShowProfilePanel] = useState(
+    () => !getActiveProfile(loadProfileState())
+  );
   const [permission, setPermission] = useState<ScreenCapturePermission>({
     supported: false,
     granted: true,
@@ -91,13 +94,19 @@ function App() {
 
   const activeProfile = getActiveProfile(profileState);
   const hasProfile = Boolean(activeProfile);
-  const isReadingAttachment = pendingAttachments.some((attachment) => attachment.status === "reading");
+  const isReadingAttachment = pendingAttachments.some(
+    (attachment) => attachment.status === "reading"
+  );
   const isBusy = state.mode === "Streaming" || isCapturingAttachment;
   const hasPendingScreen = pendingAttachments.some(
-    (attachment) => attachment.status === "ready" && attachment.kind === "image" && attachment.source === "screen"
+    (attachment) =>
+      attachment.status === "ready" && attachment.kind === "image" && attachment.source === "screen"
   );
-  const hasReadyAttachments = pendingAttachments.some((attachment) => attachment.status === "ready");
-  const canSubmitQuestion = Boolean(question.trim() || hasReadyAttachments) && !isBusy && !isReadingAttachment;
+  const hasReadyAttachments = pendingAttachments.some(
+    (attachment) => attachment.status === "ready"
+  );
+  const canSubmitQuestion =
+    Boolean(question.trim() || hasReadyAttachments) && !isBusy && !isReadingAttachment;
   const showPill = state.mode === "IdlePill" && (hasProfile || !showProfilePanel);
 
   useEffect(() => {
@@ -118,9 +127,11 @@ function App() {
   }, [showPill]);
 
   useEffect(() => {
-    void getScreenCapturePermission().then(setPermission).catch(() => {
-      setPermission({ supported: false, granted: true, canRequest: false });
-    });
+    void getScreenCapturePermission()
+      .then(setPermission)
+      .catch(() => {
+        setPermission({ supported: false, granted: true, canRequest: false });
+      });
   }, []);
 
   useEffect(() => {
@@ -197,7 +208,7 @@ function App() {
     const profiles = profileState.profiles.filter((profile) => profile.id !== profileId);
     const activeProfileId =
       profileState.activeProfileId === profileId
-        ? profiles[0]?.id ?? null
+        ? (profiles[0]?.id ?? null)
         : profileState.activeProfileId;
     const nextState = { profiles, activeProfileId };
     const nextActiveProfile = getActiveProfile(nextState);
@@ -378,13 +389,16 @@ function App() {
     } finally {
       setIsCapturingAttachment(false);
     }
-  }, [hasPendingScreen, pendingAttachments.length, permission.granted, permission.supported, state.mode]);
+  }, [
+    hasPendingScreen,
+    pendingAttachments.length,
+    permission.granted,
+    permission.supported,
+    state.mode
+  ]);
 
   const sendChatMessage = useCallback(
-    async (
-      text: string,
-      options: { includeAttachments?: boolean; visibleText?: string } = {}
-    ) => {
+    async (text: string, options: { includeAttachments?: boolean; visibleText?: string } = {}) => {
       if (!activeProfile) {
         dispatch({ type: "EXPAND" });
         setShowProfilePanel(true);
@@ -723,7 +737,9 @@ function App() {
                 <input
                   value={question}
                   onChange={(event) => setQuestion(event.target.value)}
-                  placeholder={hasReadyAttachments ? "Ask about the attachments" : "Message Clarity"}
+                  placeholder={
+                    hasReadyAttachments ? "Ask about the attachments" : "Message Clarity"
+                  }
                   disabled={isBusy}
                 />
                 <button
@@ -936,7 +952,12 @@ function ProfilePanel({
           </button>
         ) : null}
         {draft.id ? (
-          <button className="danger-button" type="button" onClick={() => onDelete(draft.id!)} title="Delete profile">
+          <button
+            className="danger-button"
+            type="button"
+            onClick={() => onDelete(draft.id!)}
+            title="Delete profile"
+          >
             <Trash2 size={15} />
           </button>
         ) : null}
@@ -1108,7 +1129,9 @@ function ProfileCards({
             >
               <span className="profile-card-main">
                 <span className="profile-card-name">{profile.name}</span>
-                <span className="profile-card-provider">{providerConfigs[profile.provider].label}</span>
+                <span className="profile-card-provider">
+                  {providerConfigs[profile.provider].label}
+                </span>
                 <span className="profile-card-model">{profile.model}</span>
               </span>
               {isActive ? (

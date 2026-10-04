@@ -129,7 +129,9 @@ export async function streamNativeHttp(
       throw new Error(streamError);
     }
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : String(error));
+    throw new Error(error instanceof Error ? error.message : String(error), {
+      cause: error
+    });
   } finally {
     unlisten();
   }

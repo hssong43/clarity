@@ -192,10 +192,7 @@ fn is_allowed_provider_url(url: &str) -> bool {
         || url.starts_with("https://openrouter.ai/")
 }
 
-fn emit_http_stream_event(
-    app: &AppHandle,
-    event: NativeHttpStreamEvent<'_>,
-) -> Result<(), String> {
+fn emit_http_stream_event(app: &AppHandle, event: NativeHttpStreamEvent<'_>) -> Result<(), String> {
     app.emit("clarity-native-http-stream", event)
         .map_err(|error| error.to_string())
 }
@@ -234,5 +231,60 @@ mod macos_screen_capture {
 
     pub fn request() -> bool {
         unsafe { CGRequestScreenCaptureAccess() }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn allows_known_provider_urls() {
+        assert!(is_allowed_provider_url(
+            "https://api.openai.com/v1/responses"
+        ));
+        assert!(is_allowed_provider_url(
+            "https://api.anthropic.com/v1/messages"
+        ));
+        assert!(is_allowed_provider_url(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:streamGenerateContent"
+        ));
+        assert!(is_allowed_provider_url(
+            "https://openrouter.ai/api/v1/chat/completions"
+        ));
+    }
+
+    #[test]
+    fn rejects_lookalike_and_insecure_urls() {
+        assert!(!is_allowed_provider_url(
+            "https://api.openai.com.evil.example/v1"
+        ));
+        assert!(!is_allowed_provider_url(
+            "https://api.openai.com@evil.example/"
+        ));
+        assert!(!is_allowed_provider_url(
+            "http://api.openai.com/v1/responses"
+        ));
+        assert!(!is_allowed_provider_url("https://api.openai.com"));
+        assert!(!is_allowed_provider_url("https://example.com/"));
+        assert!(!is_allowed_provider_url(""));
+    }
+
+    #[test]
+    fn builds_headers_from_pairs() {
+        let headers = build_headers(&[
+            ("Content-Type".to_string(), "application/json".to_string()),
+            ("x-api-key".to_string(), "secret".to_string()),
+        ])
+        .expect("valid headers");
+
+        assert_eq!(headers.get("content-type").unwrap(), "application/json");
+        assert_eq!(headers.get("x-api-key").unwrap(), "secret");
+    }
+
+    #[test]
+    fn rejects_invalid_header_names_and_values() {
+        assert!(build_headers(&[("bad header".to_string(), "v".to_string())]).is_err());
+        assert!(build_headers(&[("x-ok".to_string(), "line\nbreak".to_string())]).is_err());
     }
 }

@@ -262,9 +262,9 @@ describe("visionClient provider requests", () => {
 
 describe("visionClient provider stream parsing", () => {
   it("extracts OpenAI text deltas", () => {
-    expect(
-      extractOpenAITextDelta({ type: "response.output_text.delta", delta: "hello" })
-    ).toBe("hello");
+    expect(extractOpenAITextDelta({ type: "response.output_text.delta", delta: "hello" })).toBe(
+      "hello"
+    );
   });
 
   it("extracts Anthropic text deltas", () => {

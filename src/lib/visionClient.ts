@@ -33,12 +33,16 @@ export async function streamVisionChat({
   const parser = createProviderStreamParser(profile.provider, onEvent);
 
   try {
-    await streamNativeHttp(buildProviderHttpRequest(profile, request), (chunk) => {
-      parser.push(chunk);
-    }, signal);
+    await streamNativeHttp(
+      buildProviderHttpRequest(profile, request),
+      (chunk) => {
+        parser.push(chunk);
+      },
+      signal
+    );
     parser.finish();
   } catch (error) {
-    throw new Error(resolveProviderErrorMessage(profile.provider, error));
+    throw new Error(resolveProviderErrorMessage(profile.provider, error), { cause: error });
   }
 }
 
@@ -241,7 +245,9 @@ export function buildOpenRouterChatCompletionsPayload(model: string, request: Vi
 }
 
 export function buildSystemPrompt(request: VisionChatRequest): string {
-  const latestUserMessage = [...request.messages].reverse().find((message) => message.role === "user");
+  const latestUserMessage = [...request.messages]
+    .reverse()
+    .find((message) => message.role === "user");
   const hasAttachedScreen = (latestUserMessage?.images?.length ?? 0) > 0;
   const hasAttachedFiles = (latestUserMessage?.files?.length ?? 0) > 0;
   return [
@@ -395,7 +401,11 @@ export function extractGeminiTextDelta(event: unknown): string {
 
   return event.candidates
     .map((candidate) => {
-      if (!isRecord(candidate) || !isRecord(candidate.content) || !Array.isArray(candidate.content.parts)) {
+      if (
+        !isRecord(candidate) ||
+        !isRecord(candidate.content) ||
+        !Array.isArray(candidate.content.parts)
+      ) {
         return "";
       }
       return candidate.content.parts
@@ -508,9 +518,7 @@ export function extractOpenRouterStopReason(
 
   const rawReason = event.choices
     .map((choice) =>
-      isRecord(choice) && typeof choice.finish_reason === "string"
-        ? choice.finish_reason
-        : ""
+      isRecord(choice) && typeof choice.finish_reason === "string" ? choice.finish_reason : ""
     )
     .find(Boolean);
 
