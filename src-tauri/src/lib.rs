@@ -1,5 +1,6 @@
 mod capture;
 mod native_glass;
+mod pointer;
 mod region;
 mod secrets;
 mod shortcuts;
@@ -16,8 +17,8 @@ use secrets::StoredKeyAuth;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, LogicalSize, Manager, Size, State};
 
-const PILL_WIDTH: f64 = 184.0;
-const PILL_HEIGHT: f64 = 56.0;
+use pointer::ORB_SIZE;
+
 const PANEL_WIDTH: f64 = 430.0;
 const PANEL_HEIGHT: f64 = 620.0;
 
@@ -26,10 +27,10 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 const READ_TIMEOUT: Duration = Duration::from_secs(90);
 const CANCELLED_MESSAGE: &str = "The request was cancelled.";
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 enum OverlayMode {
-    Pill,
+    Orb,
     Panel,
 }
 
@@ -68,20 +69,32 @@ fn capture_screens(app: AppHandle) -> Result<Vec<CapturedImage>, String> {
     capture::capture_screens(app)
 }
 
+// Async so the window calls below never wait on the main thread while the pointer
+// poll thread holds the lock and waits on it too.
 #[tauri::command]
-fn set_overlay_mode(app: AppHandle, mode: OverlayMode) -> Result<(), String> {
+async fn set_overlay_mode(app: AppHandle, mode: OverlayMode) -> Result<(), String> {
     let window = app
         .get_webview_window("main")
         .ok_or_else(|| "Main overlay window was not found".to_string())?;
 
     let (width, height) = match mode {
-        OverlayMode::Pill => (PILL_WIDTH, PILL_HEIGHT),
+        OverlayMode::Orb => (ORB_SIZE, ORB_SIZE),
         OverlayMode::Panel => (PANEL_WIDTH, PANEL_HEIGHT),
     };
 
+    let pointer = app.state::<pointer::PointerState>();
+    let mut following = pointer.lock_following();
+    *following = mode == OverlayMode::Orb;
+    // The orb never takes clicks, so the app underneath keeps working.
+    window
+        .set_ignore_cursor_events(mode == OverlayMode::Orb)
+        .map_err(|error| error.to_string())?;
     window
         .set_size(Size::Logical(LogicalSize::new(width, height)))
         .map_err(|error| error.to_string())?;
+    if mode == OverlayMode::Panel {
+        pointer::place_panel(&app, &window, (width, height));
+    }
     window
         .set_always_on_top(true)
         .map_err(|error| error.to_string())?;
@@ -296,6 +309,7 @@ pub fn run() {
             app.manage(HttpState::new()?);
             app.manage(region::RegionState::default());
             app.manage(shortcuts::RegionShortcut::default());
+            app.manage(pointer::PointerState::default());
             let mut glass = native_glass::GlassKind::None;
             if let Some(window) = app.get_webview_window("main") {
                 glass = native_glass::apply(&window);
@@ -303,6 +317,8 @@ pub fn run() {
                 let _ = window.set_skip_taskbar(true);
             }
             app.manage(native_glass::NativeGlass(glass));
+            pointer::create_selection_window(app);
+            pointer::start(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -317,6 +333,7 @@ pub fn run() {
             set_api_key,
             delete_api_key,
             shortcuts::set_capture_shortcuts,
+            pointer::set_pointer_modifier,
             region::start_region_capture,
             region::region_capture_previews,
             region::finish_region_capture
