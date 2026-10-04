@@ -17,7 +17,6 @@ import { usePointerGesture } from "./hooks/usePointerGesture";
 import { useProfiles } from "./hooks/useProfiles";
 import { useScreenCapturePermission } from "./hooks/useScreenCapturePermission";
 import type { ProfileDraft } from "./lib/modelProfiles";
-import { closeOverlayWindow } from "./lib/tauri";
 
 function App() {
   const profiles = useProfiles();
@@ -140,7 +139,6 @@ function App() {
         }}
         onToggleHistory={() => setShowHistory((open) => !open)}
         onMinimize={collapseToOrb}
-        onClose={() => void closeOverlayWindow()}
       />
 
       <section className="panel-body">

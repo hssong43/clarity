@@ -619,6 +619,8 @@ dependencies = [
  "futures-util",
  "image",
  "keyring",
+ "objc2",
+ "objc2-app-kit",
  "reqwest",
  "serde",
  "serde_json",

@@ -1,4 +1,4 @@
-import { History, KeyRound, Minimize2, SquarePen, Sparkles, X } from "lucide-react";
+import { History, KeyRound, Minimize2, SquarePen, Sparkles } from "lucide-react";
 import type { ClarityMode } from "../lib/appState";
 import { providerConfigs, type ModelProfile } from "../lib/modelProfiles";
 
@@ -11,8 +11,7 @@ export function PanelHeader({
   canSwitchConversation = true,
   onNewChat,
   onToggleHistory,
-  onMinimize,
-  onClose
+  onMinimize
 }: {
   mode: ClarityMode;
   activeProfile: ModelProfile | null;
@@ -23,7 +22,6 @@ export function PanelHeader({
   onNewChat?: () => void;
   onToggleHistory?: () => void;
   onMinimize: () => void;
-  onClose: () => void;
 }) {
   return (
     <header className="panel-header glass-header" data-tauri-drag-region="deep">
@@ -73,14 +71,6 @@ export function PanelHeader({
         ) : null}
         <button className="icon-button" type="button" onClick={onMinimize} title="Collapse to orb">
           <Minimize2 size={15} />
-        </button>
-        <button
-          className="icon-button close-button"
-          type="button"
-          onClick={onClose}
-          title="Close Clarity"
-        >
-          <X size={15} />
         </button>
       </div>
     </header>

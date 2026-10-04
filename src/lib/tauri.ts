@@ -150,13 +150,6 @@ export async function startOverlayDrag(): Promise<void> {
   await getCurrentWindow().startDragging();
 }
 
-export async function closeOverlayWindow(): Promise<void> {
-  if (!isTauriRuntime()) {
-    return;
-  }
-  await getCurrentWindow().close();
-}
-
 /** Opens an http(s) link in the default browser instead of navigating the overlay. */
 export async function openExternalUrl(url: string): Promise<void> {
   if (!/^https?:\/\//i.test(url)) {
