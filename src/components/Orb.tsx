@@ -1,7 +1,5 @@
-import { Sparkles } from "lucide-react";
-
 /**
- * The idle overlay: a small orb that follows the cursor. The native window ignores
+ * The idle overlay: a small dot that follows the cursor. The native window ignores
  * the mouse, so the click handler only serves keyboard use and the browser dev server.
  */
 export function Orb({ onExpand }: { onExpand: () => void }) {
@@ -18,8 +16,6 @@ export function Orb({ onExpand }: { onExpand: () => void }) {
           onExpand();
         }
       }}
-    >
-      <Sparkles size={17} aria-hidden="true" />
-    </div>
+    />
   );
 }
