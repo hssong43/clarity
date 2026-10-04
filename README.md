@@ -85,7 +85,7 @@ npm run package:windows
 npm run package:macos
 ```
 
-릴리스 자산은 재현 가능한 패키징을 확인한 뒤 [GitHub Releases](https://github.com/hssong43/clarity/releases)에 게시할 예정입니다. 현재 저장소에 있던 설치 파일은 검증 전까지 보존하며, 이 변경에서 삭제하거나 Git 히스토리를 재작성하지 않습니다.
+`v*` 태그를 푸시하면 GitHub Actions가 Windows 설치 파일과 macOS 유니버설 DMG를 빌드해 [GitHub Releases](https://github.com/hssong43/clarity/releases)에 초안으로 올립니다. 절차와 서명 상태는 [docs/RELEASE.md](docs/RELEASE.md)를 참고하세요. 저장소의 `release/` 폴더에 있던 기존 설치 파일은 보존하며, Git 히스토리를 재작성하지 않습니다.
 
 ## 테스트와 CI
 
@@ -94,7 +94,7 @@ npm test
 npm run build
 ```
 
-단위 테스트는 대화 상태 전이, 프로필 직렬화, SSE 파싱, 첨부 처리, 제공자별 요청·응답 정규화를 다룹니다. GitHub Actions는 `push`와 pull request마다 의존성 설치, 테스트, 프론트엔드 빌드를 실행합니다.
+단위 테스트는 대화 상태 전이, 프로필 직렬화, SSE 파싱, 첨부 처리, 제공자별 요청·응답 정규화를 다룹니다. GitHub Actions는 pull request와 `main` 푸시마다 lint·포맷 검사, 테스트, 프론트엔드 빌드, Rust 검사(fmt·clippy·test)를 실행합니다.
 
 ## 현재 한계와 보안 경계
 

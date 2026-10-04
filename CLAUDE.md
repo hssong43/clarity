@@ -23,6 +23,8 @@ npm run package:windows | package:macos    # regenerates icons, then tauri build
 cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
 ```
 
+Releases: pushing a `v*` tag runs `.github/workflows/release.yml`, which builds the Windows NSIS installer and a universal macOS DMG via `tauri-action` and attaches them to a draft GitHub Release; `workflow_dispatch` builds without releasing. The tag must match the version in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml` (`scripts/check-release-version.mjs`, also run in CI). Builds are unsigned. See `docs/RELEASE.md`.
+
 CI (`.github/workflows/ci.yml`) runs on PRs and pushes to `main`: a Node job (lint, format check, tests, build) and a Rust job (fmt, clippy `-D warnings`, tests). The Rust job builds the frontend first because `tauri::generate_context!` embeds `../dist`, and installs the Linux webkit/xcb/pipewire/dbus dev packages listed in the workflow — install the same ones to build Rust locally on Linux.
 
 Prettier config: `printWidth: 100`, `trailingComma: "none"`; Markdown, `src-tauri/`, and `release/` are not formatted.
