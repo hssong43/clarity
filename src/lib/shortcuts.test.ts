@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_CAPTURE_SHORTCUT,
   formatShortcut,
-  loadCaptureShortcut,
+  DEFAULT_REGION_SHORTCUT,
+  loadCaptureShortcuts,
   saveCaptureShortcut,
   shortcutFromKeyboardEvent
 } from "./shortcuts";
@@ -48,10 +49,12 @@ describe("shortcuts", () => {
 
   it("persists the chosen shortcut, including disabled", () => {
     const storage = new MemoryStorage();
-    expect(loadCaptureShortcut(storage)).toBe(DEFAULT_CAPTURE_SHORTCUT);
-    saveCaptureShortcut("Ctrl+Alt+KeyC", storage);
-    expect(loadCaptureShortcut(storage)).toBe("Ctrl+Alt+KeyC");
-    saveCaptureShortcut("", storage);
-    expect(loadCaptureShortcut(storage)).toBe("");
+    expect(loadCaptureShortcuts(storage)).toEqual({
+      full: DEFAULT_CAPTURE_SHORTCUT,
+      region: DEFAULT_REGION_SHORTCUT
+    });
+    saveCaptureShortcut("full", "Ctrl+Alt+KeyC", storage);
+    saveCaptureShortcut("region", "", storage);
+    expect(loadCaptureShortcuts(storage)).toEqual({ full: "Ctrl+Alt+KeyC", region: "" });
   });
 });

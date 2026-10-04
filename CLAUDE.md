@@ -43,9 +43,9 @@ Prettier config: `printWidth: 100`, `trailingComma: "none"`; Markdown, `src-taur
 
 **Region capture** opens a second window labeled `region` that loads the same bundle at `index.html#region` (`main.tsx` renders `RegionSelector` instead of `App`). Rust keeps full-resolution screenshots in memory; the selector sends the selection as **fractions of the screenshot**, and Rust crops the original — so DPI scaling and monitor coordinates never enter the math. Closing the selector any other way counts as cancel. The `region` window must stay listed in `src-tauri/capabilities/default.json`.
 
-**Global shortcut**: registered from Rust (`set_capture_shortcut`, `tauri-plugin-global-shortcut`); pressing it shows the overlay and emits `clarity-capture-shortcut`. The accelerator string is stored in `localStorage` (`clarity.captureShortcut.v1`, default `CommandOrControl+Shift+Space`) and uses `KeyboardEvent.code` names (`Ctrl+Shift+KeyK`).
+**Global shortcuts** (`src-tauri/src/shortcuts.rs`): full-screen and region capture are registered together from Rust (`set_capture_shortcuts`, `tauri-plugin-global-shortcut`); pressing one shows the overlay and emits `clarity-capture-shortcut` with `{ area: "full" | "region" }`. Accelerators are stored in `localStorage` (`clarity.captureShortcut.v1` default `CommandOrControl+Shift+Space`, `clarity.regionShortcut.v1` default `Alt+Shift+Space`; `""` = off), must differ from each other, and use `KeyboardEvent.code` names (`Ctrl+Shift+KeyK`).
 
-**Persistence** is WebView `localStorage` with versioned keys (`clarity.modelProfiles.v1`, `clarity.activeModelProfileId.v1`, `clarity.overlay.position.v1`, `clarity.captureShortcut.v1`; legacy `clarity.openai.apiKey.v1` is migrated in `loadProfileState`).
+**Persistence** is WebView `localStorage` with versioned keys (`clarity.modelProfiles.v1`, `clarity.activeModelProfileId.v1`, `clarity.overlay.position.v1`, `clarity.captureShortcut.v1`, `clarity.regionShortcut.v1`; legacy `clarity.openai.apiKey.v1` is migrated in `loadProfileState`).
 
 **Running outside Tauri.** Wrappers in `src/lib/tauri.ts` check `isTauriRuntime()`; window/permission/shortcut helpers no-op and keychain storage reports unavailable, while capture and provider streaming throw. `npm run dev` in a browser renders the UI but cannot send requests.
 

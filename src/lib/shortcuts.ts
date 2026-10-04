@@ -1,5 +1,19 @@
+export type CaptureArea = "full" | "region";
+export type CaptureShortcuts = Record<CaptureArea, string>;
+
 export const DEFAULT_CAPTURE_SHORTCUT = "CommandOrControl+Shift+Space";
+export const DEFAULT_REGION_SHORTCUT = "Alt+Shift+Space";
+export const DEFAULT_SHORTCUTS: CaptureShortcuts = {
+  full: DEFAULT_CAPTURE_SHORTCUT,
+  region: DEFAULT_REGION_SHORTCUT
+};
+
 export const CAPTURE_SHORTCUT_STORAGE_KEY = "clarity.captureShortcut.v1";
+export const REGION_SHORTCUT_STORAGE_KEY = "clarity.regionShortcut.v1";
+const STORAGE_KEYS: CaptureShortcuts = {
+  full: CAPTURE_SHORTCUT_STORAGE_KEY,
+  region: REGION_SHORTCUT_STORAGE_KEY
+};
 
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
 
@@ -18,21 +32,25 @@ const MODIFIER_CODES = new Set([
   "OSRight"
 ]);
 
-/** Returns the saved shortcut, "" when disabled, or the default. */
-export function loadCaptureShortcut(storage: StorageLike = window.localStorage): string {
-  try {
-    return storage.getItem(CAPTURE_SHORTCUT_STORAGE_KEY) ?? DEFAULT_CAPTURE_SHORTCUT;
-  } catch {
-    return DEFAULT_CAPTURE_SHORTCUT;
-  }
+/** Returns each saved shortcut, "" when disabled, or its default. */
+export function loadCaptureShortcuts(storage: StorageLike = window.localStorage): CaptureShortcuts {
+  const load = (area: CaptureArea) => {
+    try {
+      return storage.getItem(STORAGE_KEYS[area]) ?? DEFAULT_SHORTCUTS[area];
+    } catch {
+      return DEFAULT_SHORTCUTS[area];
+    }
+  };
+  return { full: load("full"), region: load("region") };
 }
 
 export function saveCaptureShortcut(
+  area: CaptureArea,
   shortcut: string,
   storage: StorageLike = window.localStorage
 ): void {
   try {
-    storage.setItem(CAPTURE_SHORTCUT_STORAGE_KEY, shortcut);
+    storage.setItem(STORAGE_KEYS[area], shortcut);
   } catch {
     // Not persisting only means the default is used next launch.
   }
