@@ -1,4 +1,5 @@
 mod capture;
+mod native_glass;
 mod region;
 mod secrets;
 mod shortcuts;
@@ -87,8 +88,14 @@ fn set_overlay_mode(app: AppHandle, mode: OverlayMode) -> Result<(), String> {
     window
         .set_skip_taskbar(true)
         .map_err(|error| error.to_string())?;
+    native_glass::refresh_shape(&window);
     window.show().map_err(|error| error.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+fn native_glass_kind(state: State<'_, native_glass::NativeGlass>) -> native_glass::GlassKind {
+    state.0
 }
 
 #[tauri::command]
@@ -219,13 +226,18 @@ async fn run_http_stream(
         headers.insert(name, value);
     }
 
-    let response = client
-        .post(&request.url)
-        .headers(headers)
-        .body(request.body)
-        .send()
-        .await
-        .map_err(describe_http_error)?;
+    let method = match request.method.as_str() {
+        "GET" => reqwest::Method::GET,
+        "POST" => reqwest::Method::POST,
+        _ => return Err("HTTP method is not allowed".to_string()),
+    };
+    let mut builder = client
+        .request(method.clone(), &request.url)
+        .headers(headers);
+    if method == reqwest::Method::POST {
+        builder = builder.body(request.body);
+    }
+    let response = builder.send().await.map_err(describe_http_error)?;
 
     let status = response.status();
     if !status.is_success() {
@@ -284,15 +296,19 @@ pub fn run() {
             app.manage(HttpState::new()?);
             app.manage(region::RegionState::default());
             app.manage(shortcuts::RegionShortcut::default());
+            let mut glass = native_glass::GlassKind::None;
             if let Some(window) = app.get_webview_window("main") {
+                glass = native_glass::apply(&window);
                 let _ = window.set_always_on_top(true);
                 let _ = window.set_skip_taskbar(true);
             }
+            app.manage(native_glass::NativeGlass(glass));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             capture_screens,
             set_overlay_mode,
+            native_glass_kind,
             screen_capture_permission_status,
             request_screen_capture_permission,
             open_screen_capture_settings,

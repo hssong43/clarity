@@ -16,7 +16,7 @@ export type ScreenCapturePermission = {
 export type NativeAuthScheme = "bearer" | "xApiKey" | "xGoogApiKey";
 
 export type NativeHttpRequest = {
-  method: "POST";
+  method: "GET" | "POST";
   url: string;
   headers: Array<[string, string]>;
   body: string;
@@ -105,6 +105,16 @@ export async function setOverlayMode(mode: OverlayMode): Promise<void> {
     return;
   }
   await invoke("set_overlay_mode", { mode });
+}
+
+export type NativeGlassKind = "none" | "liquid" | "vibrancy" | "acrylic";
+
+/** The OS material the window sits on; "none" outside Tauri or when unsupported. */
+export async function getNativeGlassKind(): Promise<NativeGlassKind> {
+  if (!isTauriRuntime()) {
+    return "none";
+  }
+  return invoke<NativeGlassKind>("native_glass_kind").catch(() => "none" as const);
 }
 
 export async function getScreenCapturePermission(): Promise<ScreenCapturePermission> {
