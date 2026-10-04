@@ -90,7 +90,7 @@ describe("model profile storage", () => {
       () => "new-id"
     );
 
-    expect(validateProfileDraft(profile)).toBeNull();
+    expect(validateProfileDraft(createProfileDraft(profile))).toBeNull();
     expect(profile).toMatchObject({
       id: "new-id",
       provider: "gemini",

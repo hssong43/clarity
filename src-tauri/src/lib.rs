@@ -1,4 +1,5 @@
 mod capture;
+mod secrets;
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -8,6 +9,7 @@ use capture::CapturedImage;
 use futures_util::future::{AbortHandle, AbortRegistration, Abortable};
 use futures_util::StreamExt;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use secrets::StoredKeyAuth;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, LogicalSize, Manager, Size, State};
 
@@ -44,6 +46,9 @@ struct NativeHttpRequest {
     url: String,
     headers: Vec<(String, String)>,
     body: String,
+    /// Attach the API key stored in the OS keychain for this profile.
+    #[serde(default)]
+    auth: Option<StoredKeyAuth>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -186,6 +191,16 @@ async fn stream_http_request(
 }
 
 #[tauri::command]
+fn set_api_key(profile_id: String, api_key: String) -> Result<(), String> {
+    secrets::set_api_key(&profile_id, &api_key)
+}
+
+#[tauri::command]
+fn delete_api_key(profile_id: String) -> Result<(), String> {
+    secrets::delete_api_key(&profile_id)
+}
+
+#[tauri::command]
 fn cancel_http_request(state: State<'_, HttpState>, request_id: String) {
     state.cancel(&request_id);
 }
@@ -195,9 +210,16 @@ async fn run_http_stream(
     client: &reqwest::Client,
     request: NativeHttpRequest,
 ) -> Result<(), String> {
+    let mut headers = build_headers(&request.headers)?;
+    if let Some(auth) = &request.auth {
+        let api_key = secrets::get_api_key(&auth.profile_id)?;
+        let (name, value) = secrets::auth_header(auth.scheme, &api_key)?;
+        headers.insert(name, value);
+    }
+
     let response = client
         .post(&request.url)
-        .headers(build_headers(&request.headers)?)
+        .headers(headers)
         .body(request.body)
         .send()
         .await
@@ -263,7 +285,9 @@ pub fn run() {
             request_screen_capture_permission,
             open_screen_capture_settings,
             stream_http_request,
-            cancel_http_request
+            cancel_http_request,
+            set_api_key,
+            delete_api_key
         ])
         .run(tauri::generate_context!())
         .expect("error while running Clarity");
