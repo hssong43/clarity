@@ -73,6 +73,24 @@ describe("App", () => {
     expect(options.request.messages).toEqual([{ role: "user", content: "What is on screen?" }]);
   });
 
+  it("renders answers as markdown with a copy button", async () => {
+    seedProfile();
+    const writeText = vi.fn(async () => undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    vi.mocked(streamVisionChat).mockImplementation(async ({ onEvent }) => {
+      onEvent({ type: "delta", text: "**Bold** answer" });
+      onEvent({ type: "done", reason: "complete" });
+    });
+    render(<App />);
+    expandPill();
+
+    await act(async () => ask("Explain"));
+
+    expect(screen.getByText("Bold").tagName).toBe("STRONG");
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Copy answer" })));
+    expect(writeText).toHaveBeenCalledWith("**Bold** answer");
+  });
+
   it("sends earlier turns as history", async () => {
     seedProfile();
     vi.mocked(streamVisionChat).mockImplementation(async ({ onEvent }) => {

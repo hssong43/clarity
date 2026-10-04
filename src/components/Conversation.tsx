@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import type { ClarityState } from "../lib/appState";
+import { CopyButton } from "./CopyButton";
+import { Markdown } from "./Markdown";
 import { StatusLine } from "./StatusLine";
 
 export function Conversation({
@@ -43,18 +45,29 @@ export function Conversation({
         </div>
       ) : null}
 
-      {state.messages.map((message) => (
-        <article key={message.id} className={`message ${message.role}`}>
-          {message.content}
-        </article>
-      ))}
+      {state.messages.map((message) =>
+        message.role === "assistant" ? (
+          <article key={message.id} className="message assistant">
+            <Markdown text={message.content} />
+            <div className="message-actions">
+              <CopyButton label="Copy answer" getText={() => message.content} />
+            </div>
+          </article>
+        ) : (
+          <article key={message.id} className={`message ${message.role}`}>
+            {message.content}
+          </article>
+        )
+      )}
 
       {isCapturingAttachment ? (
         <StatusLine icon={<Loader2 size={16} className="spin" />} text="Capturing screen" />
       ) : null}
       {state.mode === "Streaming" ? (
         <article className="message assistant streaming">
-          {state.partialAnswer || (
+          {state.partialAnswer ? (
+            <Markdown text={state.partialAnswer} />
+          ) : (
             <StatusLine icon={<Loader2 size={16} className="spin" />} text="Thinking" />
           )}
         </article>
