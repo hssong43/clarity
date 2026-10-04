@@ -76,4 +76,27 @@ describe("clarityReducer", () => {
     expect(state.messages.at(-1)).toMatchObject({ role: "assistant", content: "Partial" });
     expect(state.lastStopReason).toBe("cancelled");
   });
+
+  it("loads a saved conversation and clears transient state", () => {
+    let state = clarityReducer(initialClarityState, { type: "EXPAND" });
+    state = clarityReducer(state, { type: "FAIL", error: "boom" });
+    state = clarityReducer(state, {
+      type: "LOAD_CONVERSATION",
+      messages: [{ id: "m1", role: "user", content: "Saved" }]
+    });
+
+    expect(state.mode).toBe("ExpandedReady");
+    expect(state.error).toBeNull();
+    expect(state.messages.map((message) => message.content)).toEqual(["Saved"]);
+
+    state = clarityReducer(state, { type: "LOAD_CONVERSATION", messages: [] });
+    expect(state.messages).toEqual([]);
+  });
+
+  it("does not switch conversations while an answer is streaming", () => {
+    let state = clarityReducer(initialClarityState, { type: "USER_MESSAGE", text: "Q" });
+    state = clarityReducer(state, { type: "STREAM_START" });
+    const next = clarityReducer(state, { type: "LOAD_CONVERSATION", messages: [] });
+    expect(next).toBe(state);
+  });
 });

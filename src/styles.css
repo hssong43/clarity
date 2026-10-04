@@ -1192,3 +1192,110 @@ select:focus-visible {
   border-color: rgba(151, 217, 255, 0.42);
   background: rgba(93, 187, 255, 0.22);
 }
+
+.icon-button.is-active {
+  border-color: rgba(151, 217, 255, 0.42);
+  background: rgba(93, 187, 255, 0.22);
+}
+
+.icon-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: rgba(232, 240, 250, 0.82);
+}
+
+.history-clear {
+  border: 0;
+  background: none;
+  color: #ffd8dd;
+  font-size: 12px;
+}
+
+.history-empty {
+  margin: auto 0;
+  text-align: center;
+  color: rgba(232, 240, 250, 0.6);
+  font-size: 13px;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.history-item.is-current {
+  border-color: rgba(151, 217, 255, 0.42);
+}
+
+.history-open {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  background: none;
+  color: #f5f9ff;
+  padding: 9px 4px 9px 11px;
+  text-align: left;
+}
+
+.history-open:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.history-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.history-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.history-copy small {
+  color: rgba(232, 240, 250, 0.56);
+  font-size: 11px;
+}
+
+.history-delete {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  margin-right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: rgba(255, 216, 221, 0.8);
+}
+
+.history-delete:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
