@@ -54,13 +54,13 @@ select:focus-visible {
   overflow: hidden;
   color: #fbfdff;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.06)),
-    rgba(18, 21, 28, 0.5);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)),
+    rgba(14, 18, 34, 0.42);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(26px) saturate(1.5);
-  -webkit-backdrop-filter: blur(26px) saturate(1.5);
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(30px) saturate(1.9);
+  -webkit-backdrop-filter: blur(30px) saturate(1.9);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -81,17 +81,16 @@ select:focus-visible {
 
 .glass-pill.is-drop-target {
   box-shadow:
-    inset 0 0 0 2px rgba(151, 217, 255, 0.74),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+    inset 0 0 0 2px rgba(124, 196, 255, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .pill-glow {
   position: absolute;
   inset: 1px;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(92, 210, 255, 0.28), rgba(255, 160, 210, 0.16));
-  opacity: 0.42;
+  background: radial-gradient(70% 120% at 12% 50%, rgba(124, 196, 255, 0.3), transparent 70%);
+  opacity: 0.6;
   pointer-events: none;
 }
 
@@ -112,8 +111,10 @@ select:focus-visible {
   height: 28px;
   border-radius: 999px;
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  background: conic-gradient(from 210deg, #7cc4ff, #b69cff, #ff9ccf, #7cc4ff);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    0 6px 18px rgba(124, 196, 255, 0.4);
 }
 
 .pill-label {
@@ -127,17 +128,17 @@ select:focus-visible {
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 32px;
+  border: 0;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05)),
-    rgba(13, 16, 22, 0.58);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+    rgba(14, 18, 34, 0.46);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.34),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(34px) saturate(1.55);
-  -webkit-backdrop-filter: blur(34px) saturate(1.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(36px) saturate(1.9);
+  -webkit-backdrop-filter: blur(36px) saturate(1.9);
   display: grid;
   grid-template-rows: auto 1fr;
 }
@@ -146,9 +147,10 @@ select:focus-visible {
   content: "";
   position: absolute;
   inset: 0 0 auto;
-  height: 124px;
-  background: linear-gradient(90deg, rgba(129, 220, 255, 0.16), rgba(255, 179, 216, 0.1));
-  opacity: 0.72;
+  height: 180px;
+  background:
+    radial-gradient(60% 100% at 0% 0%, rgba(124, 196, 255, 0.22), transparent 70%),
+    radial-gradient(50% 90% at 100% 0%, rgba(255, 156, 207, 0.14), transparent 70%);
   pointer-events: none;
 }
 
@@ -221,13 +223,11 @@ select:focus-visible {
   height: 32px;
   border-radius: 999px;
   color: #ffffff;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.08)),
-    rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: conic-gradient(from 210deg, #7cc4ff, #b69cff, #ff9ccf, #7cc4ff);
+  border: 0;
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    0 6px 18px rgba(124, 196, 255, 0.4);
 }
 
 .brand-copy {
@@ -238,8 +238,9 @@ select:focus-visible {
 }
 
 .brand-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
+  letter-spacing: -0.01em;
   line-height: 1.1;
 }
 
@@ -262,11 +263,10 @@ select:focus-visible {
 .send-button {
   width: 34px;
   height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 0;
   border-radius: 999px;
-  color: #edf5ff;
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.08);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -391,7 +391,12 @@ select:focus-visible {
   min-height: 0;
   flex: 1;
   border-radius: 24px;
-  padding: 14px;
+  padding: 6px 4px 6px 2px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -418,19 +423,21 @@ select:focus-visible {
 
 .message {
   max-width: 94%;
-  border-radius: 18px;
-  padding: 10px 12px;
-  line-height: 1.48;
+  border-radius: 20px;
+  padding: 10px 14px;
+  line-height: 1.58;
   white-space: pre-wrap;
   word-break: keep-all;
   overflow-wrap: anywhere;
-  border: 1px solid rgba(255, 255, 255, 0.11);
+  border: 0;
 }
 
 .message.assistant {
   align-self: flex-start;
-  color: #f7fbff;
-  background: rgba(255, 255, 255, 0.1);
+  color: rgba(247, 250, 255, 0.95);
+  background: transparent;
+  padding-left: 2px;
+  padding-right: 2px;
 }
 
 .message.assistant:has(.markdown) {
@@ -561,8 +568,10 @@ select:focus-visible {
 
 .message.user {
   align-self: flex-end;
-  color: #f9fcff;
-  background: rgba(107, 190, 255, 0.16);
+  color: #fff;
+  border-radius: 20px 20px 6px 20px;
+  background: linear-gradient(135deg, rgba(124, 196, 255, 0.5), rgba(150, 130, 255, 0.46));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .streaming {
@@ -673,12 +682,25 @@ select:focus-visible {
 
 .input-dock {
   min-height: 54px;
-  border-radius: 999px;
+  border-radius: 28px;
   display: grid;
   grid-template-columns: auto auto 1fr auto;
   align-items: center;
   gap: 8px;
   padding: 8px;
+}
+
+.send-button:not(:disabled) {
+  color: #0b1030;
+  border: 0;
+  background: linear-gradient(135deg, #7cc4ff, #a98bff);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 6px 16px rgba(124, 196, 255, 0.4);
+}
+
+.send-button:not(:disabled):hover {
+  background: linear-gradient(135deg, #93d0ff, #b9a0ff);
 }
 
 .attach-button.is-active {
@@ -700,7 +722,10 @@ select:focus-visible {
 .input-dock input {
   height: 38px;
   border-radius: 999px;
-  padding: 0 14px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  padding: 0 8px;
 }
 
 .input-dock input::placeholder,
