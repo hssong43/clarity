@@ -373,7 +373,7 @@ async function extractPdfText(file: File): Promise<string> {
       }
     }
   } finally {
-    await pdf.destroy();
+    await loadingTask.destroy();
   }
 
   return pages.join("\n\n");
