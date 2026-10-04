@@ -2,8 +2,8 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { MODEL_PROFILES_STORAGE_KEY } from "./lib/modelProfiles";
-import { CAPTURE_SHORTCUT_STORAGE_KEY } from "./lib/shortcuts";
-import { captureRegion, captureScreens, onCaptureShortcut, setCaptureShortcut } from "./lib/tauri";
+import { CAPTURE_SHORTCUT_STORAGE_KEY, REGION_SHORTCUT_STORAGE_KEY } from "./lib/shortcuts";
+import { captureRegion, captureScreens, onCaptureShortcut, setCaptureShortcuts } from "./lib/tauri";
 
 vi.mock("./lib/visionClient", () => ({ streamVisionChat: vi.fn() }));
 vi.mock("./lib/tauri", async (importActual) => ({
@@ -11,10 +11,10 @@ vi.mock("./lib/tauri", async (importActual) => ({
   captureScreens: vi.fn(),
   captureRegion: vi.fn(),
   onCaptureShortcut: vi.fn(),
-  setCaptureShortcut: vi.fn()
+  setCaptureShortcuts: vi.fn()
 }));
 
-let fireShortcut: () => void = () => undefined;
+let fireShortcut: (area: "full" | "region") => void = () => undefined;
 
 function seedProfile() {
   window.localStorage.setItem(
@@ -40,7 +40,7 @@ beforeEach(() => {
     fireShortcut = handler;
     return () => undefined;
   });
-  vi.mocked(setCaptureShortcut).mockReset().mockResolvedValue(undefined);
+  vi.mocked(setCaptureShortcuts).mockReset().mockResolvedValue(undefined);
   vi.mocked(captureScreens)
     .mockReset()
     .mockResolvedValue([
@@ -61,7 +61,10 @@ describe("capture shortcut", () => {
       render(<App />);
     });
 
-    expect(setCaptureShortcut).toHaveBeenCalledWith("CommandOrControl+Shift+Space");
+    expect(setCaptureShortcuts).toHaveBeenCalledWith(
+      "CommandOrControl+Shift+Space",
+      "Alt+Shift+Space"
+    );
   });
 
   it("opens the panel, attaches the screen, and focuses the question field", async () => {
@@ -71,7 +74,7 @@ describe("capture shortcut", () => {
     });
     expect(screen.getByRole("button", { name: "Clarity overlay" })).toBeInTheDocument();
 
-    await act(async () => fireShortcut());
+    await act(async () => fireShortcut("full"));
 
     expect(captureScreens).toHaveBeenCalledOnce();
     expect(screen.getByText("Screen attached")).toBeInTheDocument();
@@ -83,7 +86,7 @@ describe("capture shortcut", () => {
       render(<App />);
     });
 
-    await act(async () => fireShortcut());
+    await act(async () => fireShortcut("full"));
 
     expect(captureScreens).not.toHaveBeenCalled();
     expect(screen.getByText("Profile needed")).toBeInTheDocument();
@@ -94,14 +97,14 @@ describe("capture shortcut", () => {
       render(<App />);
     });
 
-    const field = screen.getByLabelText("Capture shortcut keys");
+    const field = screen.getByLabelText("Full-screen capture keys");
     act(() => field.focus());
     expect(field).toHaveValue("Press keys…");
     await act(async () => {
       fireEvent.keyDown(field, { code: "KeyK", key: "K", ctrlKey: true, shiftKey: true });
     });
 
-    expect(setCaptureShortcut).toHaveBeenLastCalledWith("Ctrl+Shift+KeyK");
+    expect(setCaptureShortcuts).toHaveBeenLastCalledWith("Ctrl+Shift+KeyK", "Alt+Shift+Space");
     expect(window.localStorage.getItem(CAPTURE_SHORTCUT_STORAGE_KEY)).toBe("Ctrl+Shift+KeyK");
     expect(field).toHaveValue("Ctrl+Shift+K");
   });
@@ -110,9 +113,9 @@ describe("capture shortcut", () => {
     await act(async () => {
       render(<App />);
     });
-    vi.mocked(setCaptureShortcut).mockRejectedValueOnce("Ctrl+Alt+KeyC could not be registered.");
+    vi.mocked(setCaptureShortcuts).mockRejectedValueOnce("Ctrl+Alt+KeyC could not be registered.");
 
-    const field = screen.getByLabelText("Capture shortcut keys");
+    const field = screen.getByLabelText("Full-screen capture keys");
     act(() => field.focus());
     expect(field).toHaveValue("Press keys…");
     await act(async () => {
@@ -120,9 +123,62 @@ describe("capture shortcut", () => {
     });
 
     expect(screen.getByText("Ctrl+Alt+KeyC could not be registered.")).toBeInTheDocument();
-    expect(setCaptureShortcut).toHaveBeenLastCalledWith("CommandOrControl+Shift+Space");
+    expect(setCaptureShortcuts).toHaveBeenLastCalledWith(
+      "CommandOrControl+Shift+Space",
+      "Alt+Shift+Space"
+    );
     expect(window.localStorage.getItem(CAPTURE_SHORTCUT_STORAGE_KEY)).toBeNull();
     expect(field).toHaveValue("Ctrl+Shift+Space");
+  });
+});
+
+describe("region capture shortcut", () => {
+  it("starts a region capture from its shortcut", async () => {
+    seedProfile();
+    vi.mocked(captureRegion).mockResolvedValue({
+      mime: "image/jpeg",
+      dataUrl: "data:image/jpeg;base64,AA",
+      width: 10,
+      height: 10,
+      displayId: "1-region"
+    });
+    await act(async () => {
+      render(<App />);
+    });
+
+    await act(async () => fireShortcut("region"));
+
+    expect(captureRegion).toHaveBeenCalledOnce();
+    expect(captureScreens).not.toHaveBeenCalled();
+    expect(screen.getByText("region")).toBeInTheDocument();
+  });
+
+  it("records a region shortcut and rejects one equal to the full-screen shortcut", async () => {
+    await act(async () => {
+      render(<App />);
+    });
+    const field = screen.getByLabelText("Region capture keys");
+
+    act(() => field.focus());
+    await act(async () => {
+      fireEvent.keyDown(field, { code: "KeyR", key: "R", ctrlKey: true, altKey: true });
+    });
+    expect(setCaptureShortcuts).toHaveBeenLastCalledWith(
+      "CommandOrControl+Shift+Space",
+      "Ctrl+Alt+KeyR"
+    );
+    expect(window.localStorage.getItem(REGION_SHORTCUT_STORAGE_KEY)).toBe("Ctrl+Alt+KeyR");
+
+    vi.mocked(setCaptureShortcuts).mockClear();
+    const fullField = screen.getByLabelText("Full-screen capture keys");
+    act(() => fullField.focus());
+    await act(async () => {
+      fireEvent.keyDown(fullField, { code: "KeyR", key: "R", ctrlKey: true, altKey: true });
+    });
+    expect(setCaptureShortcuts).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Use different keys for full-screen and region capture.")
+    ).toBeInTheDocument();
   });
 });
 

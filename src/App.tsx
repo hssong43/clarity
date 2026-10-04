@@ -7,7 +7,7 @@ import { Pill } from "./components/Pill";
 import { ProfilePanel } from "./components/ProfilePanel";
 import { ShortcutSettings } from "./components/ShortcutSettings";
 import { useAttachments } from "./hooks/useAttachments";
-import { useCaptureShortcut } from "./hooks/useCaptureShortcut";
+import { useCaptureShortcuts } from "./hooks/useCaptureShortcuts";
 import { useChatStream } from "./hooks/useChatStream";
 import { useFileDrop } from "./hooks/useFileDrop";
 import { useOverlayWindow } from "./hooks/useOverlayWindow";
@@ -59,7 +59,7 @@ function App() {
   const { isDropTarget, dropHandlers } = useFileDrop(handleDroppedFiles);
 
   const [composerFocusRequest, setComposerFocusRequest] = useState(0);
-  const { shortcut, shortcutError, updateShortcut } = useCaptureShortcut(() => {
+  const { shortcuts, shortcutError, updateShortcut } = useCaptureShortcuts((area) => {
     if (!activeProfile || showProfilePanel) {
       expandFromPill();
       return;
@@ -68,7 +68,7 @@ function App() {
       dispatch({ type: "EXPAND" });
     }
     if (!isBusy) {
-      void attachments.captureScreenAttachment();
+      void attachments.captureScreenAttachment(area);
     }
     setComposerFocusRequest((request) => request + 1);
   });
@@ -133,9 +133,9 @@ function App() {
             onSelectProfile={profiles.selectProfile}
             footer={
               <ShortcutSettings
-                shortcut={shortcut}
+                shortcuts={shortcuts}
                 error={shortcutError}
-                onChange={(next) => void updateShortcut(next)}
+                onChange={(area, next) => void updateShortcut(area, next)}
               />
             }
           />

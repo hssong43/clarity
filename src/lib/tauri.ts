@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow, PhysicalPosition } from "@tauri-apps/api/window";
 import type { CapturedImage } from "../types";
 import type { RegionSelection } from "./region";
+import type { CaptureArea } from "./shortcuts";
 
 export type OverlayMode = "pill" | "panel";
 
@@ -154,19 +155,21 @@ export async function openExternalUrl(url: string): Promise<void> {
   await openUrl(url);
 }
 
-/** Registers the global capture shortcut; "" unregisters it. */
-export async function setCaptureShortcut(shortcut: string): Promise<void> {
+/** Registers both global capture shortcuts; "" disables one. */
+export async function setCaptureShortcuts(full: string, region: string): Promise<void> {
   if (!isTauriRuntime()) {
     return;
   }
-  await invoke("set_capture_shortcut", { shortcut });
+  await invoke("set_capture_shortcuts", { full, region });
 }
 
-export async function onCaptureShortcut(handler: () => void): Promise<() => void> {
+export async function onCaptureShortcut(handler: (area: CaptureArea) => void): Promise<() => void> {
   if (!isTauriRuntime()) {
     return () => undefined;
   }
-  return listen(CAPTURE_SHORTCUT_EVENT, () => handler());
+  return listen<{ area: CaptureArea }>(CAPTURE_SHORTCUT_EVENT, ({ payload }) =>
+    handler(payload.area)
+  );
 }
 
 /** Stores the key in the OS keychain. Resolves false when that is unavailable. */
