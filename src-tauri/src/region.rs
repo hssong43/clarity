@@ -26,7 +26,7 @@ const PREVIEW_MAX_DIMENSION: u32 = 2560;
 const PREVIEW_JPEG_QUALITY: u8 = 80;
 const MIN_REGION_PIXELS: u32 = 8;
 
-struct Screenshot {
+pub struct Screenshot {
     display_id: String,
     image: RgbaImage,
     is_default: bool,
@@ -180,6 +180,14 @@ fn crop_selection(
         })
         .ok_or_else(|| "The selected display is no longer available".to_string())?;
 
+    crop_screenshot(screenshot, selection)
+}
+
+/// Crops a captured display to `selection` and encodes it for the model.
+pub fn crop_screenshot(
+    screenshot: &Screenshot,
+    selection: RegionSelection,
+) -> Result<CapturedImage, String> {
     let (x, y, width, height) = crop_rect(
         screenshot.image.width(),
         screenshot.image.height(),
@@ -197,8 +205,16 @@ fn crop_selection(
         height: resized.height(),
         original_width: width,
         original_height: height,
-        display_id: format!("{display_id}-region"),
+        display_id: format!("{}-region", screenshot.display_id),
     })
+}
+
+/// Captures every display and returns the one `target` sits on, at full resolution.
+pub fn capture_default_screenshot(target: &tauri::Monitor) -> Result<Screenshot, String> {
+    capture_all(target)?
+        .into_iter()
+        .find(|screenshot| screenshot.is_default)
+        .ok_or_else(|| "No display was available for capture".to_string())
 }
 
 /// Runs at most once per capture: clears state, closes the selector, brings the

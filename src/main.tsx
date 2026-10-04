@@ -2,11 +2,13 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { RegionSelector } from "./components/RegionSelector";
+import { SelectionFrame } from "./components/SelectionFrame";
 import { getNativeGlassKind } from "./lib/tauri";
 import "./styles.css";
 
-// The region selector window loads the same bundle at index.html#region.
-const isRegionWindow = window.location.hash === "#region";
+// The region selector and the drag-selection outline load the same bundle at
+// index.html#region and index.html#selection.
+const view = window.location.hash;
 
 // Lets the stylesheet thin out its own glass when the OS draws the real material.
 void getNativeGlassKind().then((kind) => {
@@ -16,5 +18,7 @@ void getNativeGlassKind().then((kind) => {
 });
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>{isRegionWindow ? <RegionSelector /> : <App />}</React.StrictMode>
+  <React.StrictMode>
+    {view === "#region" ? <RegionSelector /> : view === "#selection" ? <SelectionFrame /> : <App />}
+  </React.StrictMode>
 );

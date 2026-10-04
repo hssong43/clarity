@@ -45,56 +45,71 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
-.glass-pill {
+/* The orb follows the cursor in its own 44px window and never takes clicks, so the
+   app underneath keeps working. Faint tint on top of the native glass disc. */
+.orb {
   position: relative;
   width: 100%;
   height: 100%;
-  border: 0;
   border-radius: 999px;
-  overflow: hidden;
-  color: #fbfdff;
+  color: rgba(255, 255, 255, 0.9);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)),
-    rgba(14, 18, 34, 0.42);
+    radial-gradient(70% 70% at 30% 25%, rgba(255, 255, 255, 0.4), transparent 60%),
+    conic-gradient(
+      from 210deg,
+      rgba(124, 196, 255, 0.16),
+      rgba(182, 156, 255, 0.16),
+      rgba(255, 156, 207, 0.16),
+      rgba(124, 196, 255, 0.16)
+    );
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(30px) saturate(1.9);
-  -webkit-backdrop-filter: blur(30px) saturate(1.9);
-  display: inline-flex;
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -8px 14px -10px rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px) saturate(1.6);
+  -webkit-backdrop-filter: blur(10px) saturate(1.6);
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  padding: 0 16px;
   user-select: none;
-  cursor: grab;
-  touch-action: none;
 }
 
-.glass-pill:active {
-  cursor: grabbing;
-}
-
-.glass-pill:focus-visible {
+.orb:focus-visible {
   outline: none;
 }
 
-.glass-pill.is-drop-target {
-  box-shadow:
-    inset 0 0 0 2px rgba(124, 196, 255, 0.9),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
-.pill-glow {
+.orb::after {
+  content: "";
   position: absolute;
-  inset: 1px;
+  inset: 0;
   border-radius: inherit;
-  background: radial-gradient(70% 120% at 12% 50%, rgba(124, 196, 255, 0.3), transparent 70%);
-  opacity: 0.6;
+  padding: 1.2px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.9),
+    rgba(255, 255, 255, 0.05) 45%,
+    rgba(255, 255, 255, 0.5)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
   pointer-events: none;
 }
 
-.pill-mark,
+/* Outline for a modifier + drag selection, shown in its own click-through window. */
+.selection-frame {
+  position: fixed;
+  inset: 0;
+  border: 1.5px solid #7cc4ff;
+  border-radius: 4px;
+  background: rgba(124, 196, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
 .brand-mark,
 .key-mark,
 .empty-mark,
@@ -103,25 +118,6 @@ select:focus-visible {
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-}
-
-.pill-mark {
-  position: relative;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  color: #ffffff;
-  background: conic-gradient(from 210deg, #7cc4ff, #b69cff, #ff9ccf, #7cc4ff);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.7),
-    0 6px 18px rgba(124, 196, 255, 0.4);
-}
-
-.pill-label {
-  position: relative;
-  font-size: 13px;
-  font-weight: 650;
-  letter-spacing: 0;
 }
 
 .glass-sheet {
@@ -1340,8 +1336,7 @@ select:focus-visible {
 }
 
 /* Specular rim: a light edge that is bright top-left and fades toward bottom-right. */
-.glass-sheet::after,
-.glass-pill::after {
+.glass-sheet::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -1401,12 +1396,6 @@ select:focus-visible {
     transform: translateX(4%);
     opacity: 1;
   }
-}
-
-.glass-pill {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -10px 18px -12px rgba(255, 255, 255, 0.22);
 }
 
 /* Cards, notices and action buttons share one surface. */
@@ -1769,8 +1758,7 @@ select:focus-visible {
   border-radius: var(--lg-radius);
 }
 
-:root[data-native-glass] .glass-sheet,
-:root[data-native-glass] .glass-pill {
+:root[data-native-glass] .glass-sheet {
   background:
     radial-gradient(120% 60% at 0% 0%, rgba(255, 255, 255, 0.1), transparent 55%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
@@ -1781,8 +1769,7 @@ select:focus-visible {
 }
 
 /* Liquid Glass already draws its own rim and lensing. */
-:root[data-native-glass="liquid"] .glass-sheet::after,
-:root[data-native-glass="liquid"] .glass-pill::after {
+:root[data-native-glass="liquid"] .glass-sheet::after {
   opacity: 0.35;
 }
 
@@ -1795,4 +1782,26 @@ select:focus-visible {
   background:
     radial-gradient(120% 60% at 0% 0%, rgba(255, 255, 255, 0.1), transparent 55%),
     rgba(14, 18, 34, 0.3);
+}
+
+.modifier-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.key-panel .modifier-choice button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 12px;
+  color: #f8fbff;
+  background: var(--lg-fill);
+  box-shadow: var(--lg-rim);
+}
+
+.key-panel .modifier-choice button[aria-pressed="true"] {
+  background: var(--lg-fill-selected);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 0 0 1px rgba(160, 200, 255, 0.6);
 }

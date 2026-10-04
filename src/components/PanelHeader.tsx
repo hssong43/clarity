@@ -71,7 +71,7 @@ export function PanelHeader({
             <KeyRound size={15} />
           </button>
         ) : null}
-        <button className="icon-button" type="button" onClick={onMinimize} title="Minimize to pill">
+        <button className="icon-button" type="button" onClick={onMinimize} title="Collapse to orb">
           <Minimize2 size={15} />
         </button>
         <button

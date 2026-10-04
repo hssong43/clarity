@@ -40,4 +40,4 @@ These regenerate the icons first (`npm run icons`). Platform prerequisites: http
 
 1. Install and launch Clarity.
 2. Create a model profile (OpenAI, Claude, Gemini, or OpenRouter). The API key is stored in the OS keychain.
-3. The app collapses into the overlay pill; press the capture shortcut or click the pill to start.
+3. The app collapses into a small orb that follows the cursor; press the capture shortcut, or hold Option (Alt on Windows) and click or drag, to start.

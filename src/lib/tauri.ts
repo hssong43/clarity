@@ -1,11 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow, PhysicalPosition } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { CapturedImage } from "../types";
 import type { RegionSelection } from "./region";
+import type { PointerModifier } from "./pointer";
 import type { CaptureArea } from "./shortcuts";
 
-export type OverlayMode = "pill" | "panel";
+export type OverlayMode = "orb" | "panel";
 
 export type ScreenCapturePermission = {
   supported: boolean;
@@ -35,10 +36,10 @@ type NativeHttpStreamEvent = {
   message?: string;
 };
 
-const OVERLAY_POSITION_KEY = "clarity.overlay.position.v1";
 const NATIVE_HTTP_STREAM_EVENT = "clarity-native-http-stream";
 const CAPTURE_SHORTCUT_EVENT = "clarity-capture-shortcut";
 const REGION_RESULT_EVENT = "clarity-region-captured";
+const POINTER_CAPTURE_EVENT = "clarity-pointer-capture";
 
 export type RegionPreview = {
   displayId: string;
@@ -49,6 +50,10 @@ export type RegionPreview = {
 };
 
 type RegionResult = { image: CapturedImage | null; error: string | null };
+
+/** Modifier + click, or modifier + drag with the dragged region already cropped. */
+export type PointerCaptureEvent =
+  { kind: "click" } | { kind: "region"; image: CapturedImage | null; error: string | null };
 
 export function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -173,6 +178,23 @@ export async function setCaptureShortcuts(full: string, region: string): Promise
   await invoke("set_capture_shortcuts", { full, region });
 }
 
+/** Chooses which key turns a click or drag into a Clarity gesture. */
+export async function setPointerModifier(modifier: PointerModifier): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke("set_pointer_modifier", { modifier });
+}
+
+export async function onPointerCapture(
+  handler: (event: PointerCaptureEvent) => void
+): Promise<() => void> {
+  if (!isTauriRuntime()) {
+    return () => undefined;
+  }
+  return listen<PointerCaptureEvent>(POINTER_CAPTURE_EVENT, ({ payload }) => handler(payload));
+}
+
 export async function onCaptureShortcut(handler: (area: CaptureArea) => void): Promise<() => void> {
   if (!isTauriRuntime()) {
     return () => undefined;
@@ -273,48 +295,4 @@ export function isAbortError(error: unknown): boolean {
 
 function createAbortError(): DOMException {
   return new DOMException("The request was cancelled.", "AbortError");
-}
-
-export async function restoreOverlayPosition(): Promise<void> {
-  if (!isTauriRuntime()) {
-    return;
-  }
-
-  const saved = readSavedPosition();
-  if (!saved) {
-    return;
-  }
-
-  await getCurrentWindow().setPosition(new PhysicalPosition(saved.x, saved.y));
-}
-
-export async function bindOverlayPositionPersistence(): Promise<() => void> {
-  if (!isTauriRuntime()) {
-    return () => undefined;
-  }
-
-  return getCurrentWindow().onMoved(({ payload }) => {
-    window.localStorage.setItem(
-      OVERLAY_POSITION_KEY,
-      JSON.stringify({ x: Math.round(payload.x), y: Math.round(payload.y) })
-    );
-  });
-}
-
-function readSavedPosition(): { x: number; y: number } | null {
-  try {
-    const value = window.localStorage.getItem(OVERLAY_POSITION_KEY);
-    if (!value) {
-      return null;
-    }
-
-    const parsed = JSON.parse(value) as { x?: unknown; y?: unknown };
-    if (typeof parsed.x !== "number" || typeof parsed.y !== "number") {
-      return null;
-    }
-
-    return { x: parsed.x, y: parsed.y };
-  } catch {
-    return null;
-  }
 }
