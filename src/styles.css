@@ -45,7 +45,7 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
-/* The orb follows the cursor in its own 44px window and never takes clicks, so the
+/* The orb is a 12px dot that follows the cursor in its own window and never takes clicks, so the
    app underneath keeps working. Faint tint on top of the native glass disc. */
 .orb {
   position: relative;
@@ -62,14 +62,9 @@ select:focus-visible {
       rgba(255, 156, 207, 0.16),
       rgba(124, 196, 255, 0.16)
     );
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.6),
-    inset 0 -8px 14px -10px rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px) saturate(1.6);
-  -webkit-backdrop-filter: blur(10px) saturate(1.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px) saturate(1.6);
+  -webkit-backdrop-filter: blur(4px) saturate(1.6);
   user-select: none;
 }
 

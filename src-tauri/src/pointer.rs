@@ -22,14 +22,15 @@ use crate::capture::CapturedImage;
 use crate::region::{self, RegionSelection, Screenshot};
 
 pub const SELECTION_WINDOW_LABEL: &str = "selection";
-/// Logical size of the orb window.
-pub const ORB_SIZE: f64 = 44.0;
+/// Logical size of the orb window: a small dot.
+pub const ORB_SIZE: f64 = 12.0;
 const POINTER_EVENT: &str = "clarity-pointer-capture";
 const POLL_INTERVAL: Duration = Duration::from_millis(16);
 /// Movement (physical px) that turns a press into a drag.
 const DRAG_THRESHOLD_PX: f64 = 12.0;
-/// Gap (logical px) between the cursor and the orb or panel.
-const CURSOR_GAP: f64 = 18.0;
+/// Gaps (logical px) between the cursor and the orb or the panel.
+const ORB_GAP: f64 = 10.0;
+const PANEL_GAP: f64 = 9.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -356,7 +357,7 @@ fn follow_cursor(app: &AppHandle, cursor: Point, last: &mut Option<(i32, i32)>) 
     let at = place_near(
         cursor,
         (side, side),
-        CURSOR_GAP * scale,
+        ORB_GAP * scale,
         Rect::of_monitor(&monitor),
     );
     let next = (at.x.round() as i32, at.y.round() as i32);
@@ -382,7 +383,7 @@ pub fn place_panel(app: &AppHandle, window: &WebviewWindow, logical_size: (f64, 
     let at = place_near(
         cursor,
         (logical_size.0 * scale, logical_size.1 * scale),
-        CURSOR_GAP * scale / 2.0,
+        PANEL_GAP * scale,
         Rect::of_monitor(&monitor),
     );
     let _ = window.set_position(PhysicalPosition::new(
