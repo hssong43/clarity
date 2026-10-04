@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check app versions are in sync
+        run: node scripts/check-release-version.mjs "v$(node -p "require('./package.json').version")"
+
       - name: Lint
         run: npm run lint
 
