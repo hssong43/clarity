@@ -11,6 +11,9 @@ vi.mock("pdfjs-dist/legacy/build/pdf.worker.mjs?url", () => ({
   default: "/assets/pdf.worker.mjs"
 }));
 
+const destroyPdfLoadingTask = vi.hoisted(() => vi.fn(async () => undefined));
+
+// Mirrors the pdfjs 6 API: cleanup goes through the loading task.
 vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
   GlobalWorkerOptions: {},
   getDocument: () => ({
@@ -18,9 +21,9 @@ vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
       numPages: 1,
       getPage: async () => ({
         getTextContent: async () => ({ items: [{ str: "PDF selectable text" }] })
-      }),
-      destroy: vi.fn()
-    })
+      })
+    }),
+    destroy: destroyPdfLoadingTask
   })
 }));
 
@@ -78,6 +81,7 @@ describe("attachment parsing", () => {
     if (attachment.status === "ready" && attachment.kind === "text") {
       expect(attachment.file.text).toBe("PDF selectable text");
     }
+    expect(destroyPdfLoadingTask).toHaveBeenCalledOnce();
   });
 
   it("extracts DOCX raw text", async () => {
