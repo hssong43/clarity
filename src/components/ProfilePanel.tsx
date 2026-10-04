@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, KeyRound, Plus, Trash2 } from "lucide-react";
 import {
   providerConfigs,
@@ -20,6 +20,8 @@ type ProfilePanelProps = {
   onProvider: (provider: ProviderId) => void;
   onSave: (draft: ProfileDraft) => void;
   onSelectProfile: (profileId: string) => void;
+  /** Extra settings shown under the profile form. */
+  footer?: ReactNode;
 };
 
 export function ProfilePanel({
@@ -33,7 +35,8 @@ export function ProfilePanel({
   onNewProfile,
   onProvider,
   onSave,
-  onSelectProfile
+  onSelectProfile,
+  footer
 }: ProfilePanelProps) {
   const canSubmit = Boolean(
     draft.name.trim() && (draft.apiKey.trim() || draft.hasStoredKey) && draft.model.trim()
@@ -122,6 +125,7 @@ export function ProfilePanel({
         ) : null}
       </div>
       {error ? <p className="key-error">{error}</p> : null}
+      {footer}
     </form>
   );
 }
