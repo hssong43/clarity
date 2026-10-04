@@ -271,7 +271,13 @@ pub fn create_selection_window(app: &tauri::App) {
     .build();
     if let Ok(window) = window {
         let _ = window.set_ignore_cursor_events(true);
+        crate::desktop_pin::keep_on_screen(&window);
     }
+}
+
+/// Asks the frontend to open the panel, as a modifier + click does.
+pub fn request_open(app: &AppHandle) {
+    let _ = app.emit(POINTER_EVENT, PointerEvent::Click);
 }
 
 pub fn start(app: AppHandle) {
@@ -317,7 +323,7 @@ fn run(app: AppHandle) {
         match tracker.update(sample) {
             None => {}
             Some(Gesture::Click) => {
-                let _ = app.emit(POINTER_EVENT, PointerEvent::Click);
+                request_open(&app);
             }
             Some(Gesture::DragStart(start)) => {
                 drag = begin_drag(&app, start);

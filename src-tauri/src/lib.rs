@@ -1,9 +1,11 @@
 mod capture;
+mod desktop_pin;
 mod native_glass;
 mod pointer;
 mod region;
 mod secrets;
 mod shortcuts;
+mod tray;
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -15,7 +17,7 @@ use futures_util::StreamExt;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use secrets::StoredKeyAuth;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, LogicalSize, Manager, Size, State};
+use tauri::{AppHandle, Emitter, LogicalSize, Manager, Size, State, WindowEvent};
 
 use pointer::ORB_SIZE;
 
@@ -313,11 +315,23 @@ pub fn run() {
             let mut glass = native_glass::GlassKind::None;
             if let Some(window) = app.get_webview_window("main") {
                 glass = native_glass::apply(&window);
+                desktop_pin::keep_on_screen(&window);
                 let _ = window.set_always_on_top(true);
                 let _ = window.set_skip_taskbar(true);
+                // Without the main window there is nothing to show, so end the app.
+                let handle = app.handle().clone();
+                window.on_window_event(move |event| {
+                    if matches!(event, WindowEvent::Destroyed) {
+                        handle.exit(0);
+                    }
+                });
             }
             app.manage(native_glass::NativeGlass(glass));
+            // A menu bar app: no Dock icon, reachable from the tray icon.
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             pointer::create_selection_window(app);
+            let _ = tray::create(app);
             pointer::start(app.handle().clone());
             Ok(())
         })
