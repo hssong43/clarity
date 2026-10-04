@@ -100,7 +100,7 @@ export async function streamNativeHttp(
   let streamError: string | null = null;
 
   const unlisten = await listen<NativeHttpStreamEvent>(NATIVE_HTTP_STREAM_EVENT, ({ payload }) => {
-    if (payload.requestId !== requestId) {
+    if (payload.requestId !== requestId || signal?.aborted) {
       return;
     }
 
@@ -114,12 +114,21 @@ export async function streamNativeHttp(
     }
   });
 
+  const cancel = () => {
+    void invoke("cancel_http_request", { requestId }).catch(() => undefined);
+  };
+
   try {
     if (signal?.aborted) {
-      throw new Error("The request was cancelled.");
+      throw createAbortError();
     }
+    signal?.addEventListener("abort", cancel, { once: true });
 
     await invoke("stream_http_request", { request: streamRequest });
+    if (signal?.aborted) {
+      throw createAbortError();
+    }
+
     const flushed = decoder.decode();
     if (flushed) {
       onChunk(flushed);
@@ -129,12 +138,24 @@ export async function streamNativeHttp(
       throw new Error(streamError);
     }
   } catch (error) {
+    if (signal?.aborted) {
+      throw isAbortError(error) ? error : createAbortError();
+    }
     throw new Error(error instanceof Error ? error.message : String(error), {
       cause: error
     });
   } finally {
+    signal?.removeEventListener("abort", cancel);
     unlisten();
   }
+}
+
+export function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+function createAbortError(): DOMException {
+  return new DOMException("The request was cancelled.", "AbortError");
 }
 
 export async function restoreOverlayPosition(): Promise<void> {

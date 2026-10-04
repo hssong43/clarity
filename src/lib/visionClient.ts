@@ -1,6 +1,6 @@
 import type { ModelProfile, ProviderId } from "./modelProfiles";
 import type { NativeHttpRequest } from "./tauri";
-import { streamNativeHttp } from "./tauri";
+import { isAbortError, streamNativeHttp } from "./tauri";
 import { formatBytes } from "./attachments";
 import type {
   ChatImageAttachment,
@@ -44,6 +44,9 @@ export async function streamVisionChat({
     );
     parser.finish();
   } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
     throw new Error(resolveProviderErrorMessage(profile.provider, error), { cause: error });
   }
 }
