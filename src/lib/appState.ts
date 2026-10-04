@@ -27,7 +27,8 @@ export type ClarityEvent =
   | { type: "STREAM_DONE"; reason?: StreamStopReason; message?: string }
   | { type: "FAIL"; error: string }
   | { type: "RESET_ERROR" }
-  | { type: "USER_MESSAGE"; text: string };
+  | { type: "USER_MESSAGE"; text: string }
+  | { type: "LOAD_CONVERSATION"; messages: ChatMessage[] };
 
 export const initialClarityState: ClarityState = {
   mode: "IdlePill",
@@ -99,6 +100,20 @@ export function clarityReducer(state: ClarityState, event: ClarityEvent): Clarit
       };
     case "RESET_ERROR":
       return { ...state, mode: "ExpandedReady", error: null };
+    case "LOAD_CONVERSATION":
+      // Ignored mid-stream so an answer is never attached to the wrong chat.
+      if (state.mode === "Streaming" || state.mode === "Capturing") {
+        return state;
+      }
+      return {
+        ...state,
+        mode: state.mode === "Error" ? "ExpandedReady" : state.mode,
+        messages: event.messages,
+        partialAnswer: "",
+        lastStopReason: null,
+        lastStopMessage: null,
+        error: null
+      };
     case "USER_MESSAGE":
       return {
         ...state,

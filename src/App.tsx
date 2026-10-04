@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { Composer } from "./components/Composer";
 import { Conversation } from "./components/Conversation";
+import { HistoryPanel } from "./components/HistoryPanel";
 import { PanelHeader } from "./components/PanelHeader";
 import { PermissionNotice } from "./components/PermissionNotice";
 import { Pill } from "./components/Pill";
@@ -9,6 +10,7 @@ import { ShortcutSettings } from "./components/ShortcutSettings";
 import { useAttachments } from "./hooks/useAttachments";
 import { useCaptureShortcuts } from "./hooks/useCaptureShortcuts";
 import { useChatStream } from "./hooks/useChatStream";
+import { useConversations } from "./hooks/useConversations";
 import { useFileDrop } from "./hooks/useFileDrop";
 import { useOverlayWindow } from "./hooks/useOverlayWindow";
 import { useProfiles } from "./hooks/useProfiles";
@@ -23,6 +25,8 @@ function App() {
     activeProfile,
     onMissingProfile: profiles.openProfileSetup
   });
+  const history = useConversations({ messages: state.messages, mode: state.mode, dispatch });
+  const [showHistory, setShowHistory] = useState(false);
   const { permission, requestPermission, openSettings } = useScreenCapturePermission();
   const attachments = useAttachments({ mode: state.mode, dispatch, permission });
   const { attachFiles, isCapturingAttachment, pendingAttachments } = attachments;
@@ -113,6 +117,13 @@ function App() {
         activeProfile={activeProfile}
         isCapturingAttachment={isCapturingAttachment}
         onOpenProfiles={profiles.editActiveProfile}
+        historyOpen={showHistory}
+        canSwitchConversation={history.canSwitch}
+        onNewChat={() => {
+          history.startNew();
+          setShowHistory(false);
+        }}
+        onToggleHistory={() => setShowHistory((open) => !open)}
         onMinimize={collapseToPill}
         onClose={() => void closeOverlayWindow()}
       />
@@ -151,13 +162,27 @@ function App() {
 
         {showAssistant ? (
           <>
-            <Conversation
-              state={state}
-              isBusy={isBusy}
-              isCapturingAttachment={isCapturingAttachment}
-              onDismissError={() => dispatch({ type: "RESET_ERROR" })}
-              onContinue={continueAnswer}
-            />
+            {showHistory ? (
+              <HistoryPanel
+                conversations={history.conversations}
+                currentId={history.currentId}
+                canSwitch={history.canSwitch}
+                onOpen={(id) => {
+                  history.open(id);
+                  setShowHistory(false);
+                }}
+                onDelete={history.remove}
+                onClearAll={history.clearAll}
+              />
+            ) : (
+              <Conversation
+                state={state}
+                isBusy={isBusy}
+                isCapturingAttachment={isCapturingAttachment}
+                onDismissError={() => dispatch({ type: "RESET_ERROR" })}
+                onContinue={continueAnswer}
+              />
+            )}
             <Composer
               pendingAttachments={pendingAttachments}
               hasPendingScreen={attachments.hasPendingScreen}

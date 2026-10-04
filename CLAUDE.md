@@ -45,7 +45,9 @@ Prettier config: `printWidth: 100`, `trailingComma: "none"`; Markdown, `src-taur
 
 **Global shortcuts** (`src-tauri/src/shortcuts.rs`): full-screen and region capture are registered together from Rust (`set_capture_shortcuts`, `tauri-plugin-global-shortcut`); pressing one shows the overlay and emits `clarity-capture-shortcut` with `{ area: "full" | "region" }`. Accelerators are stored in `localStorage` (`clarity.captureShortcut.v1` default `CommandOrControl+Shift+Space`, `clarity.regionShortcut.v1` default `Alt+Shift+Space`; `""` = off), must differ from each other, and use `KeyboardEvent.code` names (`Ctrl+Shift+KeyK`).
 
-**Persistence** is WebView `localStorage` with versioned keys (`clarity.modelProfiles.v1`, `clarity.activeModelProfileId.v1`, `clarity.overlay.position.v1`, `clarity.captureShortcut.v1`, `clarity.regionShortcut.v1`; legacy `clarity.openai.apiKey.v1` is migrated in `loadProfileState`).
+**Persistence** is WebView `localStorage` with versioned keys (`clarity.modelProfiles.v1`, `clarity.activeModelProfileId.v1`, `clarity.overlay.position.v1`, `clarity.captureShortcut.v1`, `clarity.regionShortcut.v1`, `clarity.conversations.v1`; legacy `clarity.openai.apiKey.v1` is migrated in `loadProfileState`).
+
+**Chat history** (`src/lib/conversations.ts`, `useConversations`): up to 30 conversations are saved as text only (no screenshots or file contents) after each completed turn; the latest reopens on launch. Switching chats is blocked while an answer streams so the reply can't land in the wrong conversation (the reducer also ignores `LOAD_CONVERSATION` mid-stream).
 
 **Running outside Tauri.** Wrappers in `src/lib/tauri.ts` check `isTauriRuntime()`; window/permission/shortcut helpers no-op and keychain storage reports unavailable, while capture and provider streaming throw. `npm run dev` in a browser renders the UI but cannot send requests.
 

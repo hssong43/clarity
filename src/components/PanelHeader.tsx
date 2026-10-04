@@ -1,4 +1,4 @@
-import { KeyRound, Minimize2, Sparkles, X } from "lucide-react";
+import { History, KeyRound, Minimize2, SquarePen, Sparkles, X } from "lucide-react";
 import type { ClarityMode } from "../lib/appState";
 import { providerConfigs, type ModelProfile } from "../lib/modelProfiles";
 
@@ -7,6 +7,10 @@ export function PanelHeader({
   activeProfile,
   isCapturingAttachment,
   onOpenProfiles,
+  historyOpen = false,
+  canSwitchConversation = true,
+  onNewChat,
+  onToggleHistory,
   onMinimize,
   onClose
 }: {
@@ -14,6 +18,10 @@ export function PanelHeader({
   activeProfile: ModelProfile | null;
   isCapturingAttachment: boolean;
   onOpenProfiles: () => void;
+  historyOpen?: boolean;
+  canSwitchConversation?: boolean;
+  onNewChat?: () => void;
+  onToggleHistory?: () => void;
   onMinimize: () => void;
   onClose: () => void;
 }) {
@@ -31,6 +39,28 @@ export function PanelHeader({
         </span>
       </div>
       <div className="header-actions">
+        {activeProfile && onNewChat ? (
+          <button
+            className="icon-button"
+            type="button"
+            onClick={onNewChat}
+            disabled={!canSwitchConversation}
+            title="New chat"
+          >
+            <SquarePen size={15} />
+          </button>
+        ) : null}
+        {activeProfile && onToggleHistory ? (
+          <button
+            className={`icon-button ${historyOpen ? "is-active" : ""}`}
+            type="button"
+            onClick={onToggleHistory}
+            aria-pressed={historyOpen}
+            title="Chat history"
+          >
+            <History size={15} />
+          </button>
+        ) : null}
         {activeProfile ? (
           <button
             className="icon-button"
